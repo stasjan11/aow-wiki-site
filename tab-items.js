@@ -145,6 +145,7 @@
     // отмеченные «зафиксировано»/«улучшено» и общий переключатель ковки
     roll: {},
     stoneRoll: {},   // прокрутка свойств грани у предка (отдельно от собственных)
+    stoneFix: new Set(), // «фикс» стата грани — тоже своя надбавка, не путать с предметом
     fix: new Set(),
     enhance: new Set(),
     divine: false,
@@ -909,7 +910,8 @@
     const gStone = (i.fromStone && ITEMS[i.fromStone]) || null;
     const gStats = ((gStone && gStone.stats) || []).slice();
     const hasStoneCols = gStats.length > 0;
-    const gState = { ...s, fix: new Set(), enhance: new Set(), divine: false, refine: 0 };
+    // у грани свой «фикс» (+30 %), но нет «усил»/ковки/перековки — их ролит предмет
+    const gState = { ...s, fix: s.stoneFix, enhance: new Set(), divine: false, refine: 0 };
     const gByKey = new Map(gStats.map((st) => [st.key, st]));
     for (const st of gStats) if (s.stoneRoll[st.key] == null) s.stoneRoll[st.key] = 50;
     const gValue = (st) => rollValue(st, s.stoneRoll[st.key], gState);
@@ -926,13 +928,20 @@
     const stoneRow = (st, inMain) => {
       const row = el('div', 'drop roll-row');
       const ctl = el('div', 'roll-ctl');
-      const dash = el('span', 'roll-na', '—');
-      dash.title = 'Свойство грани: «фикс»/«усил»/ковки у неё нет — только своя прокрутка от сида грани';
-      ctl.appendChild(dash);
+      // у стата грани бывает зафиксированный (+30 %) — как на карточке самой грани
+      if (canFix(st.key)) {
+        ctl.appendChild(toggleBtn(state.stoneFix, st.key, 'фикс',
+          `Зафиксированный стат грани: +${ROLL.fixedPct}% к её прокрученному значению ` +
+          '(как на карточке самой грани)'));
+      } else {
+        const dash = el('span', 'roll-na', '—');
+        dash.title = 'У этого свойства грани надбавок нет';
+        ctl.appendChild(dash);
+      }
       row.appendChild(ctl);
       const nm = el('div', 'drop-name');
       nm.appendChild(el('div', '', st.label || st.key));
-      nm.appendChild(el('div', 'drop-code', inMain ? st.key + ' · грань' : st.key));
+      nm.appendChild(el('div', 'drop-code', st.key));
       row.appendChild(nm);
       const gb = statBounds(st, gState);
       const range = el('div', 'roll-range-text',
@@ -1004,20 +1013,19 @@
     // собственные свойства предка: в колонке «Грань» — её вклад, в «Итоге» — сумма
     // (грань-статы всегда обычные, ability_* среди них нет, поэтому эффект не трогаем)
     const ownKeys = new Set(i.stats.map((st) => st.key));
-    const gOnly = gStats.filter((st) => !ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
-    const gOver = gStats.filter((st) => ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
     for (const st of main) table.appendChild(statRow(st, back, stone, gExtra(st.key), hasStoneCols));
-    for (const st of gOnly) table.appendChild(stoneRow(st, true));
     if (effect.length) {
       table.appendChild(el('div', 'roll-group', 'Эффект предмета'));
       for (const st of effect) table.appendChild(statRow(st, back, stone, null, hasStoneCols));
     }
 
-    // свойства грани, совпадающие с собственными: отдельной группой — их
-    // ползунки двигают вклад грани в колонках «Грань»/«Итог» строк выше
-    if (gOver.length) {
+    // все свойства грани — своей группой: и совпадающие с предметом, и те,
+    // что есть только у грани (у них «Предмет» — прочерк, «Итог» = значение грани)
+    if (gStats.length) {
       table.appendChild(el('div', 'roll-group', 'Свойства грани (прибавляются)'));
-      for (const st of gOver) table.appendChild(stoneRow(st, false));
+      for (const st of [...gStats].sort((a, b) => b.value - a.value)) {
+        table.appendChild(stoneRow(st, !ownKeys.has(st.key)));
+      }
     }
     box.appendChild(table);
 
@@ -1044,10 +1052,11 @@
         'нельзя: у них прокрутка идёт от начального сида. В игре надбавки ' +
         'открываются на уровне перековки 4–9 и только у предметов качества 5 и выше, а каждая ' +
         'перековка поднимает нижний край прокрутки на 3 % (до 27 %) — здесь показан свежий предмет.' +
-        (gStats.length ? ' Свойства грани — в колонке «Грань», в «Итоге» — их сумма со свойством ' +
-          'предмета (как в игре). Ползунки грани — в группе «Свойства грани (прибавляются)», а её ' +
-          'свойства, которых у самого предмета нет, стоят строками с пометкой «грань». У грани своя ' +
-          'прокрутка от её сида; перековка и надбавки предмета ролят только собственные статы.' : '')));
+        (gStats.length ? ' Свойства грани — группой «Свойства грани (прибавляются)»: в колонке ' +
+          '«Грань» — её вклад, в «Итоге» — сумма со свойством предмета (как в игре); у свойств, ' +
+          'которых у предмета нет (например «% общего крита»), в «Предмете» прочерк. Ползунки и ' +
+          '«фикс» грани (+' + ROLL.fixedPct + '%) — в этой же группе. Перековка и «усил» предмета ' +
+          'на грань не действуют: она ролится своим сидом.' : '')));
     }
   }
 
