@@ -877,6 +877,37 @@
       table.appendChild(el('div', 'roll-group', 'Эффект предмета'));
       for (const st of effect) table.appendChild(statRow(st, back, stone));
     }
+
+    // у предка сверх собственных свойств идут свойства грани (в игре они
+    // прибавляются при вознесении и прокручиваются от сида грани — ползунка тут нет)
+    const gStone = i.fromStone && ITEMS[i.fromStone];
+    if (gStone && (gStone.stats || []).length) {
+      table.appendChild(el('div', 'roll-group', 'Свойства грани (прибавляются)'));
+      // грань не куют — её окно считаем без «фикс»/«усил»/божественной
+      const clean = { ...s, fix: new Set(), enhance: new Set(), divine: false, refine: 0 };
+      for (const st of [...gStone.stats].sort((a, b) => b.value - a.value)) {
+        const row = el('div', 'drop roll-row');
+        const ctl = el('div', 'roll-ctl');
+        const dash = el('span', 'roll-na', '—');
+        dash.title = 'Свойства грани прокручиваются отдельно — от сида грани, надбавок у них нет';
+        ctl.appendChild(dash);
+        row.appendChild(ctl);
+        const nm = el('div', 'drop-name');
+        nm.appendChild(el('div', '', st.label || st.key));
+        nm.appendChild(el('div', 'drop-code', st.key));
+        row.appendChild(nm);
+        const b = statBounds(st, clean);
+        const range = el('div', 'roll-range-text',
+          b.min === b.max ? fmtStat(st, b.min) : `${fmtStat(st, b.min)} – ${fmtStat(st, b.max)}`);
+        range.title = 'Окно прокрутки грани — тот же разброс из сборки, что у предметов';
+        row.appendChild(range);
+        row.appendChild(el('div', 'roll-ctl-cell'));
+        const val = el('div', 'num roll-value', fmtStat(st, (b.min + b.max) / 2));
+        val.title = 'Середина диапазона: у каждой грани своя прокрутка от её сида';
+        row.appendChild(val);
+        table.appendChild(row);
+      }
+    }
     box.appendChild(table);
 
     // пересчёт всех срок после смены надбавки «улучшено»
