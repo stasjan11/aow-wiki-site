@@ -339,6 +339,44 @@
       box.appendChild(itemGrid([...seen.values()].sort((a, b) => b.chance - a.chance), 'chest'));
     }
 
+    // --- сундук-награда тира: открывается в конце захода за кристаллы души
+    const cr = t.chestReward;
+    if (cr) {
+      box.appendChild(el('h2', 'sec', `Сундук-награда (${cr.poolId})` +
+        (cr.poolName ? ` — «${cr.poolName}»` : '')));
+      const levels = cr.rewardTiers.map((rt, n, all) => {
+        const at = rt.minCoins > 0 ? `от ${rt.minCoins}` : `меньше ${all[n - 1].minCoins}`;
+        const extra = rt.extraDraw
+          ? `+${rt.extraDraw} вытяжк${rt.extraDraw === 1 ? 'а' : 'и'}`
+          : 'без бонусных вытяжек';
+        return `${rt.tier}-й — ${at}: ${extra}, древние монеты ×${rt.multMin}–${rt.multMax}`;
+      }).join('; ');
+      box.appendChild(el('div', 'desc-text',
+        'В конце захода открывается сундук за собранные кристаллы души: одна вытяжка — ' +
+        `${cr.coinsPerDraw} кристаллов, за вытяжку падает один предмет из пула ${cr.poolId}. ` +
+        `Уровень сундука по кристаллам даёт бонусные вытяжки: ${levels}.`));
+      const co = GREED.coins;
+      if (co) {
+        const nrm = co.normal || {};
+        const elt = co.elite || {};
+        const bss = co.boss || {};
+        box.appendChild(el('div', 'note note-hard',
+          `Кристаллы души падают с монстров: обычный — ${nrm.amount} (шанс ${nrm.luckyPct} % — сразу ` +
+          `${nrm.lucky}, ещё ${nrm.bonusPct} % — ${nrm.bonus}); элита — ${elt.amount} (${elt.luckyPct} % — ${elt.lucky}); ` +
+          `босс — ${bss.amount}. Если вся команда погибла, остаётся ${Math.round((co.deathRetain || 0.5) * 100)} %. ` +
+          `Вытяжек за заход: ⌊кристаллы ÷ ${cr.coinsPerDraw}⌋ + бонус уровня.`));
+      }
+      box.appendChild(el('div', 'note note-hard',
+        `Древние монеты («Древняя монета», ${cr.ancientItemId}) капают вместе с предметами: ` +
+        `⌈кристаллы × ${cr.ancientPerCoin} × множитель уровня⌉, плюс таланты «Древний дар» ` +
+        '(T927 и T928, +8 % каждый) добавляют ⌊монеты × процент ÷ 100⌋.'));
+      const poolTotal = cr.entries.reduce((s, e) => s + e.weight, 0);
+      box.appendChild(itemGrid(
+        cr.entries.slice().sort((a, b) => b.weight - a.weight)
+          .map((e) => ({ entry: e, chance: poolTotal ? e.weight / poolTotal : 0, from: cr.poolId })),
+        'chest'));
+    }
+
     // --- монстры тира
     if (t.monsters.length) {
       box.appendChild(el('h2', 'sec', `Монстры тира (${t.monsters.length})`));

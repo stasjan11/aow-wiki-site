@@ -639,7 +639,7 @@
         'Ни у одного монстра в дропе этого рецепта нет — источников в данных не нашлось.'));
     }
 
-    // --- бесконечка Пещеры жадности: награды боссов и товары торговцев по этапам
+    // --- Пещера жадности: бесконечка (боссы/торговцы) и сундук-награда тиров
     if (i.cave && i.cave.length) {
       const stages = (kind) => [...new Set(i.cave.filter((d) => d.kind === kind).map((d) => d.stage))]
         .sort((a, b) => a - b);
@@ -649,12 +649,28 @@
       const parts = [];
       if (bosses.length) parts.push(`награда боссов ${bosses.join(', ')} (волны ${wavesOf(bosses)})`);
       if (merchants.length) parts.push(`у торговцев на этапах ${merchants.join(', ')} (волны ${wavesOf(merchants)})`);
-      box.appendChild(el('h2', 'sec', 'Бесконечка Пещеры жадности'));
-      const line = el('div', 'note note-hard', 'Встречается в бесконечном режиме: ' + parts.join('; ') + '.');
-      line.title = 'Открыть «Небо» → «Бесконечка»';
-      line.style.cursor = 'pointer';
-      line.onclick = () => go('sky', 'endless');
-      box.appendChild(line);
+      if (parts.length) {
+        box.appendChild(el('h2', 'sec', 'Бесконечка Пещеры жадности'));
+        const line = el('div', 'note note-hard', 'Встречается в бесконечном режиме: ' + parts.join('; ') + '.');
+        line.title = 'Открыть «Небо» → «Бесконечка»';
+        line.style.cursor = 'pointer';
+        line.onclick = () => go('sky', 'endless');
+        box.appendChild(line);
+      }
+
+      // сундук-награда тира (Небо 1/2/3 → P803/P804/P805) — открывается в конце захода
+      const rewardByTier = new Map();
+      for (const d of i.cave) if (d.kind === 'reward') rewardByTier.set(d.tier, d.poolId);
+      const rewardTiers = [...rewardByTier.keys()].sort((a, b) => a - b);
+      if (rewardTiers.length) {
+        box.appendChild(el('h2', 'sec', 'Сундук-награда Пещеры жадности'));
+        const label = rewardTiers.map((t) => `Небо ${t} (${rewardByTier.get(t)})`).join(', ');
+        const line = el('div', 'note note-hard', `Падает из сундука-награды: ${label}.`);
+        line.title = `Открыть «Небо» → «Небо ${rewardTiers[0]}»`;
+        line.style.cursor = 'pointer';
+        line.onclick = () => go('sky', 'tier' + rewardTiers[0]);
+        box.appendChild(line);
+      }
     }
 
     // --- платный магазин и гача
