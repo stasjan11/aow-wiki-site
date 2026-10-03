@@ -311,20 +311,6 @@
     return r.min === r.max ? fmtStat(st, r.min) : `${fmtStat(st, r.min)} – ${fmtStat(st, r.max)}`;
   }
 
-  // насколько предок выше обычного предмета (по середине диапазона)
-  function compareDelta(sa, sb, key, s) {
-    if (!sa || !sb) return '—';
-    const mid = (x) => {
-      const r = statBounds(x, s || state);
-      return (r.min + r.max) / 2;
-    };
-    const from = mid(sb);
-    const to = mid(sa);
-    if (!from) return '—';
-    const d = ((to - from) / Math.abs(from)) * 100;
-    return (d >= 0 ? '+' : '') + d.toFixed(0) + '%';
-  }
-
   const TYPE_LABEL = {
     monster_normal: 'Обычный',
     monster_elite: 'Элитный',
@@ -935,7 +921,9 @@
   }
 
   // --- сравнение предка с обычным предметом
-  // Предок получается из грани: у него свои характеристики, у базового предмета свои.
+  // В игре предок создаётся вознесением с гранью: к его собственным свойствам
+  // прибавляются свойства грани (прокручиваются отдельно, от сида грани) —
+  // поэтому столбец «Предок» считается суммой, как в игре.
   function renderCompare(box, i) {
     if (!i.fromStone || !STONES[i.fromStone]) return;
     const s = STONES[i.fromStone];
@@ -951,15 +939,42 @@
 
     if (!state.compare) return;
 
-    // объединяем ключи обоих предметов: у грани и базового набор свойств разный
-    const keys = [...new Set([...i.stats.map((x) => x.key), ...base.stats.map((x) => x.key)])];
+    const stone = ITEMS[s.id];
+    const stoneStats = (stone && stone.stats) || [];
+    // грань не куют — её окно прокрутки считаем без «фикс»/«усил»/божественной
+    const clean = { ...state, fix: new Set(), enhance: new Set(), divine: false, refine: 0 };
+
+    // объединяем ключи трёх предметов: у грани и базового набор свойств разный
+    const keys = [...new Set([
+      ...i.stats.map((x) => x.key),
+      ...base.stats.map((x) => x.key),
+      ...stoneStats.map((x) => x.key),
+    ])];
     const pick = (it) => {
       const m = new Map();
       for (const st of it.stats) m.set(st.key, st);
       return m;
     };
-    const a = pick(i);      // предок
-    const b = pick(base);   // обычный
+    const a = pick(i);                       // предок: собственные свойства
+    const b = pick(base);                    // обычный предмет
+    const g = pick(stone || { stats: [] });  // грань
+
+    const mid = (st, stt) => {
+      const r = statBounds(st, stt || state);
+      return (r.min + r.max) / 2;
+    };
+    // «предок» в игре = свои свойства + свойства грани (у каждого свой разброс)
+    const ancText = (key) => {
+      const sa = a.get(key);
+      const sg = g.get(key);
+      if (!sg) return statText(sa, key);
+      const st = sa || sg;
+      const ra = sa ? statBounds(sa, state) : null;
+      const rg = statBounds(sg, clean);
+      const min = (ra ? ra.min : 0) + rg.min;
+      const max = (ra ? ra.max : 0) + rg.max;
+      return min === max ? fmtStat(st, min) : `${fmtStat(st, min)} – ${fmtStat(st, max)}`;
+    };
 
     const table = el('div', 'drops cmp-list');
     const head = el('div', 'drops-head');
@@ -972,24 +987,47 @@
     for (const key of keys) {
       const sa = a.get(key);
       const sb = b.get(key);
-      const st = sa || sb;
+      const sg = g.get(key);
+      const st = sa || sb || sg;
       const row = el('div', 'drop cmp-row');
       const nm = el('div', 'drop-name');
       nm.appendChild(el('div', '', st.label || key));
       nm.appendChild(el('div', 'drop-code', key));
       row.appendChild(nm);
       row.appendChild(el('div', 'num num-w', statText(sb, key)));
-      row.appendChild(el('div', 'num num-c', statText(sa, key)));
-      row.appendChild(el('div', 'num cmp-delta', compareDelta(sa, sb, key)));
+      const cell = el('div', 'num num-c', ancText(key));
+      if (sg) {
+        cell.title = 'Свои свойства: ' + (sa ? statText(sa, key) : '—') +
+          ' · грань: ' + statText(sg, key, clean);
+      }
+      row.appendChild(cell);
+      // разница — по середине диапазона; у свойств только от грани базы нет
+      let delta = '—';
+      if (sb && (sa || sg)) {
+        const from = mid(sb);
+        const to = (sa ? mid(sa) : 0) + (sg ? mid(sg, clean) : 0);
+        if (from) {
+          const d = ((to - from) / Math.abs(from)) * 100;
+          delta = (d >= 0 ? '+' : '') + d.toFixed(0) + '%';
+        }
+      }
+      row.appendChild(el('div', 'num cmp-delta', delta));
       table.appendChild(row);
     }
     box.appendChild(table);
     box.appendChild(el('div', 'note',
-      'Разница — по середине диапазона прокрутки: «+11 %» значит, что у предка ' +
-      'то же свойство в среднем на 11 % выше. «—» — свойства нет у одной из версий.'));
+      '«Предок» — как в игре: при вознесении к его собственным свойствам прибавляются ' +
+      'свойства грани (у каждого своя прокрутка — от сида предмета и от сида грани, ' +
+      'здесь показана середина диапазона). «+11 %» значит, что у предка свойство в ' +
+      'среднем на 11 % выше; «—» — свойства нет у одной из версий.'));
   }
 
   function renderStone(box, i) {
+    // свойства грани прибавляются к предку — факт из игры, а не замена
+    const stoneMergeNote = () => el('div', 'note',
+      'Свойства грани не заменяют свойства предка, а прибавляются сверх них: у предка ' +
+      'своя прокрутка собственных свойств, у грани — своя (от сида грани).');
+
     // предмет-предок: получается из грани, которая улучшает базовую версию
     if (i.fromStone && STONES[i.fromStone]) {
       const s = STONES[i.fromStone];
@@ -1009,6 +1047,7 @@
       row.onclick = () => select(s.id);
       box.appendChild(row);
       box.appendChild(dropWaves(s));
+      box.appendChild(stoneMergeNote());
     }
 
     // предмет можно улучшить гранью
@@ -1029,6 +1068,7 @@
       row.onclick = () => select(s.id);
       box.appendChild(row);
       box.appendChild(dropWaves(s));
+      box.appendChild(stoneMergeNote());
       return;
     }
 
@@ -1053,6 +1093,7 @@
       if (target) row.onclick = () => select(target.id);
       box.appendChild(row);
       box.appendChild(dropWaves(s));
+      box.appendChild(stoneMergeNote());
     }
   }
 
