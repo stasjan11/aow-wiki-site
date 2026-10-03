@@ -898,61 +898,75 @@
       return { get: () => gValue(g), min: gb.min, max: gb.max };
     };
 
+    // строка свойства грани со своим ползунком (прокрутка от сида грани);
+    // inMain — свойство, которое есть ТОЛЬКО у грани: это стат предмета,
+    // поэтому стоит среди его характеристик с пометкой «грань»
+    const stoneRow = (st, inMain) => {
+      const row = el('div', 'drop roll-row');
+      const ctl = el('div', 'roll-ctl');
+      const dash = el('span', 'roll-na', '—');
+      dash.title = 'Свойство грани: «фикс»/«усил»/ковки у неё нет — только своя прокрутка от сида грани';
+      ctl.appendChild(dash);
+      row.appendChild(ctl);
+      const nm = el('div', 'drop-name');
+      nm.appendChild(el('div', '', st.label || st.key));
+      nm.appendChild(el('div', 'drop-code', inMain ? st.key + ' · грань' : st.key));
+      row.appendChild(nm);
+      const gb = statBounds(st, gState);
+      const range = el('div', 'roll-range-text',
+        gb.min === gb.max ? fmtStat(st, gb.min) : `${fmtStat(st, gb.min)} – ${fmtStat(st, gb.max)}`);
+      range.title = 'Окно прокрутки грани — тот же разброс из сборки, что у предметов; ' +
+        'перековка предмета на грань не влияет (та ролит только его собственные свойства)';
+      row.appendChild(range);
+      const wrap = el('div', 'roll-wrap');
+      const inp = el('input', 'roll-range');
+      inp.type = 'range';
+      inp.min = '0';
+      inp.max = '100';
+      inp.value = String(s.stoneRoll[st.key]);
+      inp.title = inMain
+        ? 'Прокрутка грани: это свойство есть только у неё — ползунок двигает значение предмета'
+        : 'Прокрутка грани — от её сида; двигает и итоговое значение свойства выше';
+      wrap.appendChild(inp);
+      const cell = el('div', 'roll-ctl-cell');
+      cell.appendChild(wrap);
+      row.appendChild(cell);
+      const val = el('div', 'num roll-value');
+      row.appendChild(val);
+      const refresh = () => {
+        const pos = Number(inp.value);
+        s.stoneRoll[st.key] = pos;
+        const roll = -0.5 + pos / 100; // окно грани без сдвига за перековку
+        val.textContent = fmtStat(st, gValue(st));
+        val.style.color = statColor(roll);
+        val.title = (inMain
+          ? `Свойство только от грани: ${fmtStat(st, gValue(st))} — у самого предмета его нет`
+          : `Свойство грани: ${fmtStat(st, gValue(st))} — прибавляется к свойству предка выше`) +
+          `\nПрокрутка ${(roll * 100).toFixed(0)} % от допуска, своя у каждой грани`;
+      };
+      inp.oninput = () => { refresh(); renderStats.refresh(); };
+      refresh();
+      back.push(refresh);
+      return row;
+    };
+
     // собственные свойства предка: значение = своё + грань (грань-статы —
     // всегда обычные свойства, среди них нет ability_*, поэтому эффект не трогаем)
+    const ownKeys = new Set(i.stats.map((st) => st.key));
+    const gOnly = gStats.filter((st) => !ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
+    const gOver = gStats.filter((st) => ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
     for (const st of main) table.appendChild(statRow(st, back, stone, gExtra(st.key)));
+    for (const st of gOnly) table.appendChild(stoneRow(st, true));
     if (effect.length) {
       table.appendChild(el('div', 'roll-group', 'Эффект предмета'));
       for (const st of effect) table.appendChild(statRow(st, back, stone));
     }
 
-    // группа грани: те же ползунки прокрутки, но от сида грани
-    if (gStats.length) {
+    // свойства грани, совпадающие с собственными: отдельной группой — их
+    // ползунки двигают вклад грани в итоговых значениях строк выше
+    if (gOver.length) {
       table.appendChild(el('div', 'roll-group', 'Свойства грани (прибавляются)'));
-      for (const st of gStats.sort((a, b) => b.value - a.value)) {
-        const row = el('div', 'drop roll-row');
-        const ctl = el('div', 'roll-ctl');
-        const dash = el('span', 'roll-na', '—');
-        dash.title = 'У грани нет «фикс»/«усил»/ковки — только своя прокрутка от её сида';
-        ctl.appendChild(dash);
-        row.appendChild(ctl);
-        const nm = el('div', 'drop-name');
-        nm.appendChild(el('div', '', st.label || st.key));
-        nm.appendChild(el('div', 'drop-code', st.key));
-        row.appendChild(nm);
-        const gb = statBounds(st, gState);
-        const range = el('div', 'roll-range-text',
-          gb.min === gb.max ? fmtStat(st, gb.min) : `${fmtStat(st, gb.min)} – ${fmtStat(st, gb.max)}`);
-        range.title = 'Окно прокрутки грани — тот же разброс из сборки, что у предметов; ' +
-          'перековка предмета на грань не влияет (та ролит только его собственные свойства)';
-        row.appendChild(range);
-        const wrap = el('div', 'roll-wrap');
-        const inp = el('input', 'roll-range');
-        inp.type = 'range';
-        inp.min = '0';
-        inp.max = '100';
-        inp.value = String(s.stoneRoll[st.key]);
-        inp.title = 'Прокрутка грани — от её сида; двигает и итоговое значение свойства выше';
-        wrap.appendChild(inp);
-        const box2 = el('div', 'roll-ctl-cell');
-        box2.appendChild(wrap);
-        row.appendChild(box2);
-        const val = el('div', 'num roll-value');
-        row.appendChild(val);
-        const refresh = () => {
-          const pos = Number(inp.value);
-          s.stoneRoll[st.key] = pos;
-          const roll = -0.5 + pos / 100; // окно грани без сдвига за перековку
-          val.textContent = fmtStat(st, gValue(st));
-          val.style.color = statColor(roll);
-          val.title = `Свойство грани: ${fmtStat(st, gValue(st))} — прибавляется к свойству предка выше` +
-            `\nПрокрутка ${(roll * 100).toFixed(0)} % от допуска, своя у каждой грани`;
-        };
-        inp.oninput = () => { refresh(); renderStats.refresh(); };
-        refresh();
-        back.push(refresh);
-        table.appendChild(row);
-      }
+      for (const st of gOver) table.appendChild(stoneRow(st, false));
     }
     box.appendChild(table);
 
@@ -979,9 +993,10 @@
         'нельзя: у них прокрутка идёт от начального сида. В игре надбавки ' +
         'открываются на уровне перековки 4–9 и только у предметов качества 5 и выше, а каждая ' +
         'перековка поднимает нижний край прокрутки на 3 % (до 27 %) — здесь показан свежий предмет.' +
-        (gStats.length ? ' Свойства грани — отдельной группой: они прибавляются к итоговым значениям ' +
-          'свойств выше (ползунки грани двигают её вклад), у грани своя прокрутка от её сида, ' +
-          'а перековка и надбавки предмета на неё не действуют.' : '')));
+        (gStats.length ? ' Свойства грани: совпадающие с собственными — отдельной группой, они ' +
+          'прибавляются к значениям строк выше (ползунки грани двигают её вклад), а свойства, ' +
+          'которые есть только у грани, стоят строками среди характеристик с пометкой «грань». ' +
+          'У грани своя прокрутка от её сида, перековка и надбавки предмета на неё не действуют.' : '')));
     }
   }
 
