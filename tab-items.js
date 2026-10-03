@@ -695,9 +695,10 @@
 
   // Строка характеристики: [кнопки] [подпись] [разброс] [ползунок] [значение].
   // У свойств эффекта ползунка нет — вместо него 6 кнопок-положений.
-  // extra (у предка) — вклад грани в это же свойство: { get, min, max }, он
-  // прибавляется к значению, а окно разброса расширяется окном грани.
-  function statRow(st, back, stone, extra) {
+  // extra (у предка) — вклад грани в это же свойство: { get, min, max, color }.
+  // cols — у предка со свойствами грани добавляются колонки «Грань» (вклад)
+  // и «Итог» (свойство + грань); само значение предмета остаётся собственным.
+  function statRow(st, back, stone, extra, cols) {
     const effect = isEffectStat(st.key);
     const row = el('div', 'drop roll-row' + (effect ? ' roll-row-effect' : ''));
     const ctl = el('div', 'roll-ctl');
@@ -727,10 +728,6 @@
     row.appendChild(nm);
 
     const bounds = statBounds(st, state);
-    if (extra) {
-      bounds.min += extra.min;
-      bounds.max += extra.max;
-    }
     const rangeText = bounds.min === bounds.max
       ? fmtStat(st, bounds.min)
       : `${fmtStat(st, bounds.min)} – ${fmtStat(st, bounds.max)}`;
@@ -740,14 +737,16 @@
     const val = el('div', 'num roll-value');
     const control = el('div', 'roll-ctl-cell');
     let refresh;
+    let ownNum = 0; // собственное значение — для колонки «Итог»
 
     if (rollPct(st.key) == null) {
       // значение зафиксировано в данных — ни прокрутки, ни надбавок
       range.title = 'Прокрутки нет: значение задано в данных предмета';
-      val.textContent = fmtStat(st, st.value + (extra ? extra.get() : 0));
+      val.textContent = fmtStat(st, st.value);
       val.classList.add('t-fixed');
       val.title = 'Значение зафиксировано в данных предмета, прокрутки нет';
-      refresh = () => { if (extra) val.textContent = fmtStat(st, st.value + extra.get()); };
+      ownNum = st.value;
+      refresh = () => {};
     } else if (effect) {
       range.title = 'Возможные значения свойства эффекта: прокрутка квантована шагом 1/5, ' +
         'поэтому значений всего несколько';
@@ -772,6 +771,7 @@
         chips.forEach((c, n) => c.classList.toggle('is-on', n === k));
         val.textContent = chips[k].textContent;
         val.style.color = chips[k].style.color;
+        ownNum = possible[k].value;
         val.title = `Значение ${chips[k].textContent} — одно из ${chips.length} возможных ` +
           `при перековке ${state.refine}` +
           (isReverse(st.key) ? '\nОбратное свойство: чем меньше, тем лучше' : '') +
@@ -791,21 +791,43 @@
       refresh = () => {
         state.roll[st.key] = Number(inp.value);
         const own = rollValue(st, state.roll[st.key], state);
-        const cur = own + (extra ? extra.get() : 0);
-        val.textContent = fmtStat(st, cur);
-        val.title = `Текущая прокрутка: ${fmtStat(st, cur)} ` +
+        ownNum = own;
+        val.textContent = fmtStat(st, own);
+        val.title = `Текущая прокрутка: ${fmtStat(st, own)} ` +
           `(${(rollAt(st, state.roll[st.key]) * 100).toFixed(0)} % от допуска)` +
-          (extra ? `\nСвоё ${fmtStat(st, own)} + грань ${fmtStat(st, extra.get())}` : '') +
+          (extra ? `\nС гранью итог: ${fmtStat(st, own + extra.get())}` : '') +
           (isReverse(st.key) ? '\nОбратное свойство: чем меньше, тем лучше' : '') + colorTip;
         val.style.color = statColorAt(st, state.roll[st.key]);
       };
       inp.oninput = refresh;
     }
 
-    if (extra) range.title += '\nДиапазон — своё окно прокрутки вместе с окном грани';
     row.appendChild(range);
     row.appendChild(control); // пустая ячейка, если прокрутки нет
     row.appendChild(val);
+
+    // у предка — колонки «Грань» (вклад грани) и «Итог» (свойство + грань)
+    if (cols) {
+      const gcell = el('div', 'num roll-stone');
+      const tcell = el('div', 'num roll-total');
+      row.appendChild(gcell);
+      row.appendChild(tcell);
+      const base = refresh;
+      refresh = () => {
+        base();
+        const g = extra ? extra.get() : 0;
+        gcell.textContent = extra ? fmtStat(st, g) : '—';
+        tcell.textContent = fmtStat(st, ownNum + g);
+        if (extra) {
+          gcell.style.color = extra.color();
+          gcell.title = 'Вклад грани — ползунки в группе «Свойства грани (прибавляются)»';
+          tcell.title = 'Итог: свойство предмета + грань';
+        } else {
+          gcell.title = 'У грани нет этого свойства';
+          tcell.title = 'Итог равен свойству предмета: грань сюда ничего не добавляет';
+        }
+      };
+    }
     refresh();
     back.push(refresh);
     return row;
@@ -878,24 +900,22 @@
       box.appendChild(bar);
     }
 
-    const table = el('div', 'drops roll-list');
-    const back = []; // функции пересчёта строк — их дёргает ползунок
-
     // у предка сверх собственных свойств идут свойства грани: в игре при
     // вознесении они прибавляются, прокручиваясь от сида грани. Перековка и
     // надбавки («фикс»/«усил»/ковка) — только у собственных свойств: у грани
     // своё окно (−½…+½, без сдвига), своя прокрутка — отдельными ползунками.
     const gStone = (i.fromStone && ITEMS[i.fromStone]) || null;
     const gStats = ((gStone && gStone.stats) || []).slice();
+    const hasStoneCols = gStats.length > 0;
     const gState = { ...s, fix: new Set(), enhance: new Set(), divine: false, refine: 0 };
     const gByKey = new Map(gStats.map((st) => [st.key, st]));
     for (const st of gStats) if (s.stoneRoll[st.key] == null) s.stoneRoll[st.key] = 50;
     const gValue = (st) => rollValue(st, s.stoneRoll[st.key], gState);
+    const gColor = (st) => statColor(-0.5 + s.stoneRoll[st.key] / 100);
     const gExtra = (key) => {
       const g = gByKey.get(key);
       if (!g) return null;
-      const gb = statBounds(g, gState);
-      return { get: () => gValue(g), min: gb.min, max: gb.max };
+      return { get: () => gValue(g), color: () => gColor(g) };
     };
 
     // строка свойства грани со своим ползунком (прокрутка от сида грани);
@@ -926,23 +946,36 @@
       inp.value = String(s.stoneRoll[st.key]);
       inp.title = inMain
         ? 'Прокрутка грани: это свойство есть только у неё — ползунок двигает значение предмета'
-        : 'Прокрутка грани — от её сида; двигает и итоговое значение свойства выше';
+        : 'Прокрутка грани — от её сида; двигает вклад в колонках «Грань» и «Итог» выше';
       wrap.appendChild(inp);
       const cell = el('div', 'roll-ctl-cell');
       cell.appendChild(wrap);
       row.appendChild(cell);
-      const val = el('div', 'num roll-value');
-      row.appendChild(val);
+      const pcell = el('div', 'num roll-stone-p'); // «Предмет»: у самого предмета свойства нет
+      const gcell = el('div', 'num roll-stone');   // «Грань»
+      const tcell = el('div', 'num roll-total');   // «Итог»
+      row.appendChild(pcell);
+      row.appendChild(gcell);
+      row.appendChild(tcell);
       const refresh = () => {
         const pos = Number(inp.value);
         s.stoneRoll[st.key] = pos;
         const roll = -0.5 + pos / 100; // окно грани без сдвига за перековку
-        val.textContent = fmtStat(st, gValue(st));
-        val.style.color = statColor(roll);
-        val.title = (inMain
-          ? `Свойство только от грани: ${fmtStat(st, gValue(st))} — у самого предмета его нет`
-          : `Свойство грани: ${fmtStat(st, gValue(st))} — прибавляется к свойству предка выше`) +
+        const v = gValue(st);
+        pcell.textContent = '—';
+        pcell.title = inMain
+          ? 'У самого предмета этого свойства нет — оно только от грани'
+          : 'Строка-ползунок грани: её вклад прибавляется в строках свойств выше';
+        gcell.textContent = fmtStat(st, v);
+        gcell.style.color = statColor(roll);
+        gcell.title = (inMain
+          ? `Свойство только от грани: ${fmtStat(st, v)} — у самого предмета его нет`
+          : `Свойство грани: ${fmtStat(st, v)} — прибавляется к свойству предмета выше`) +
           `\nПрокрутка ${(roll * 100).toFixed(0)} % от допуска, своя у каждой грани`;
+        tcell.textContent = inMain ? fmtStat(st, v) : '—';
+        tcell.title = inMain
+          ? 'Итог равен свойству грани: у предмета своего нет'
+          : 'Итог смотрите в строке свойства предмета выше';
       };
       inp.oninput = () => { refresh(); renderStats.refresh(); };
       refresh();
@@ -950,20 +983,36 @@
       return row;
     };
 
-    // собственные свойства предка: значение = своё + грань (грань-статы —
-    // всегда обычные свойства, среди них нет ability_*, поэтому эффект не трогаем)
+    const table = el('div', 'drops roll-list' + (hasStoneCols ? ' has-stone' : ''));
+    const back = []; // функции пересчёта строк — их дёргает ползунок
+
+    // шапка колонок — только у предка со свойствами грани
+    if (hasStoneCols) {
+      const head = el('div', 'roll-head');
+      head.appendChild(el('div', '', ''));
+      head.appendChild(el('div', '', 'Свойство'));
+      head.appendChild(el('div', '', 'Разброс'));
+      head.appendChild(el('div', '', 'Прокрутка'));
+      head.appendChild(el('div', 'num', 'Предмет'));
+      head.appendChild(el('div', 'num', 'Грань'));
+      head.appendChild(el('div', 'num', 'Итог'));
+      table.appendChild(head);
+    }
+
+    // собственные свойства предка: в колонке «Грань» — её вклад, в «Итоге» — сумма
+    // (грань-статы всегда обычные, ability_* среди них нет, поэтому эффект не трогаем)
     const ownKeys = new Set(i.stats.map((st) => st.key));
     const gOnly = gStats.filter((st) => !ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
     const gOver = gStats.filter((st) => ownKeys.has(st.key)).sort((a, b) => b.value - a.value);
-    for (const st of main) table.appendChild(statRow(st, back, stone, gExtra(st.key)));
+    for (const st of main) table.appendChild(statRow(st, back, stone, gExtra(st.key), hasStoneCols));
     for (const st of gOnly) table.appendChild(stoneRow(st, true));
     if (effect.length) {
       table.appendChild(el('div', 'roll-group', 'Эффект предмета'));
-      for (const st of effect) table.appendChild(statRow(st, back, stone));
+      for (const st of effect) table.appendChild(statRow(st, back, stone, null, hasStoneCols));
     }
 
     // свойства грани, совпадающие с собственными: отдельной группой — их
-    // ползунки двигают вклад грани в итоговых значениях строк выше
+    // ползунки двигают вклад грани в колонках «Грань»/«Итог» строк выше
     if (gOver.length) {
       table.appendChild(el('div', 'roll-group', 'Свойства грани (прибавляются)'));
       for (const st of gOver) table.appendChild(stoneRow(st, false));
@@ -993,10 +1042,10 @@
         'нельзя: у них прокрутка идёт от начального сида. В игре надбавки ' +
         'открываются на уровне перековки 4–9 и только у предметов качества 5 и выше, а каждая ' +
         'перековка поднимает нижний край прокрутки на 3 % (до 27 %) — здесь показан свежий предмет.' +
-        (gStats.length ? ' Свойства грани: совпадающие с собственными — отдельной группой, они ' +
-          'прибавляются к значениям строк выше (ползунки грани двигают её вклад), а свойства, ' +
-          'которые есть только у грани, стоят строками среди характеристик с пометкой «грань». ' +
-          'У грани своя прокрутка от её сида, перековка и надбавки предмета на неё не действуют.' : '')));
+        (gStats.length ? ' Свойства грани — в колонке «Грань», в «Итоге» — их сумма со свойством ' +
+          'предмета (как в игре). Ползунки грани — в группе «Свойства грани (прибавляются)», а её ' +
+          'свойства, которых у самого предмета нет, стоят строками с пометкой «грань». У грани своя ' +
+          'прокрутка от её сида; перековка и надбавки предмета ролят только собственные статы.' : '')));
     }
   }
 

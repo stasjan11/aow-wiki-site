@@ -696,6 +696,26 @@ h2.sec {
   grid-template-columns: 116px 288px 124px 204px 118px;
   cursor: default;
 }
+/* у предка со свойствами грани — ещё две колонки: грань и итог (сумма) */
+.roll-list.has-stone .roll-row,
+.roll-list.has-stone .roll-head {
+  grid-template-columns: 116px 288px 118px 170px 96px 96px 104px;
+}
+.roll-head {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fg-3);
+}
+.roll-stone { color: var(--fg-2); }
+.roll-stone-p { color: var(--fg-3); }
+.roll-total { font-weight: 600; }
 .roll-ctl { display: flex; gap: 4px; align-items: center; }
 .roll-btn { padding: 3px 7px; font-size: 11px; }
 .roll-na { color: var(--fg-3); font-size: 12px; }
