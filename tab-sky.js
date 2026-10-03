@@ -8,7 +8,6 @@
 
   const GREED = AOW.greed;
   const ITEMS = AOW.items;
-  const POOLS = AOW.pools;
   const MONSTERS = AOW.monsters;
 
   // подписи типов монстров — те же, что во вкладке «Монстры и дроп»
@@ -302,42 +301,8 @@
     head.appendChild(el('div', 'd-code', `qing_tian_mi_jing · тир ${tier}`));
     box.appendChild(head);
 
-    // --- что продаёт торговец
-    box.appendChild(el('h2', 'sec', `Торговец (${t.shops.length})`));
-    const shops = el('div', 'drop-grid');
-    for (const s of t.shops) {
-      const cell = el('div', 'drop-cell');
-      cell.title = `${s.name}\n${s.id}` + (s.poolId ? `\nОткрывает пул ${s.poolId}` : '');
-      cell.appendChild(iconNode(s));
-      const txt = el('div', 'dc-text');
-      txt.appendChild(el('div', 'dc-name', s.name));
-      txt.appendChild(el('div', 'dc-code', s.itemId || s.id));
-      cell.appendChild(txt);
-      const cost = s.priceMin === s.priceMax ? `${s.priceMin}` : `${s.priceMin}–${s.priceMax}`;
-      cell.appendChild(el('div', 'dc-chance', cost + ' зол.'));
-      if (s.itemId && ITEMS[s.itemId]) {
-        cell.onclick = () => go('consumables', s.itemId);
-        cell.title += '\n\nКлик — открыть в расходниках';
-      }
-      shops.appendChild(cell);
-    }
-    box.appendChild(shops);
-
-    // --- что лежит в этих сундуках (в ячейке подписано, из какого сундука)
-    const withPool = t.shops.filter((s) => s.poolId && POOLS[s.poolId]);
-    if (withPool.length) {
-      box.appendChild(el('h2', 'sec', 'Что выпадает из сундуков тира'));
-      const seen = new Map();
-      for (const s of withPool) {
-        const entries = POOLS[s.poolId].entries || [];
-        const total = entries.reduce((a, e) => a + e.weight, 0);
-        for (const e of entries) {
-          const cur = seen.get(e.id);
-          if (!cur || e.weight / total > cur.chance) seen.set(e.id, { entry: e, chance: e.weight / total, from: s.name });
-        }
-      }
-      box.appendChild(itemGrid([...seen.values()].sort((a, b) => b.chance - a.chance), 'chest'));
-    }
+    // (торговец тира и содержимое его сундуков убраны по просьбе пользователя —
+    //  данные t.shops остаются в greed.js, вернуть можно этими же блоками)
 
     // --- сундук-награда тира: открывается в конце захода за кристаллы души
     const cr = t.chestReward;
