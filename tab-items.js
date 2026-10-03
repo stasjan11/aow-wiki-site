@@ -799,7 +799,9 @@
           (isReverse(st.key) ? '\nОбратное свойство: чем меньше, тем лучше' : '') + colorTip;
         val.style.color = statColorAt(st, state.roll[st.key]);
       };
-      inp.oninput = refresh;
+      // через стрелку, а не прямой ссылкой: в таблице с колонками грани
+      // refresh позже оборачивается — прямой ссылкой колонки «Грань»/«Итог» не обновились бы
+      inp.oninput = () => refresh();
     }
 
     row.appendChild(range);
