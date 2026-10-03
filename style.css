@@ -1,0 +1,1768 @@
+:root {
+  --bg: #14161c;
+  --bg-2: #1a1d25;
+  --bg-3: #21252f;
+  --line: #2c313d;
+  --line-2: #383e4d;
+  --fg: #e6e8ee;
+  --fg-2: #9aa2b4;
+  --fg-3: #6b7386;
+  --accent: #c8a04a;
+  --accent-2: #8a6f2e;
+  --code: #7f8aa3;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+/* атрибут hidden должен побеждать display:flex/grid у наших блоков */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body { display: flex; flex-direction: column; }
+
+/* ---------------------------------------------------------------- шапка */
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 20px;
+  height: 54px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+.brand { display: flex; align-items: baseline; gap: 7px; }
+.brand-mark {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+.brand-sub { font-size: 12px; color: var(--fg-3); }
+
+.tabs { display: flex; gap: 2px; }
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-2);
+  font: inherit;
+  padding: 16px 14px 14px;
+  cursor: pointer;
+}
+.tab:hover:not(:disabled) { color: var(--fg); }
+.tab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:disabled { color: var(--fg-3); opacity: .45; cursor: default; }
+
+/* ------------------------------------------------------------ раскладка */
+
+.layout {
+  display: grid;
+  grid-template-columns: 330px 1fr;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.layout-sky { grid-template-columns: 1fr; }
+
+/* правая колонка с подвкладками сверху */
+.right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.right > .detail { flex: 1 1 auto; }
+
+.subtabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 26px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+  overflow-x: auto;
+}
+.subtab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 13px;
+  padding: 12px 14px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.subtab:hover { color: var(--fg); }
+.subtab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+.subtab .cnt { color: var(--fg-3); font-size: 11px; margin-left: 5px; }
+
+/* ------------------------------------------------------------ сайдбар */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.filters {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font: inherit;
+  padding: 7px 10px;
+  outline: none;
+}
+.input:focus { border-color: var(--accent-2); }
+
+/* переключатель сложности */
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+}
+.seg-btn {
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 4px;
+  cursor: pointer;
+}
+.seg-btn:hover { color: var(--fg); }
+.seg-btn.is-active { background: var(--bg-3); color: var(--accent); }
+
+select.input { cursor: pointer; }
+
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; }
+
+.reset {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.reset:hover { color: var(--fg); border-color: var(--accent-2); }
+
+/* выбор предмета */
+
+.item-filter { position: relative; }
+
+.picked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 8px;
+  background: var(--bg-3);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+.picked-x {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: var(--fg-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.picked-x:hover { color: var(--fg); }
+
+.suggest {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+
+.sug {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.sug:hover, .sug.is-sel { background: var(--bg); }
+.sug-name { font-size: 13px; }
+.sug-id { font-size: 11px; color: var(--code); }
+.sug-count { margin-left: auto; font-size: 11px; color: var(--fg-3); }
+
+/* --------------------------------------------------------- список */
+
+.list-head {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.count { font-size: 12px; color: var(--fg-3); }
+
+.list { overflow-y: auto; flex: 1 1 auto; }
+
+.card {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card:hover { background: var(--bg-3); }
+.card.is-active { background: var(--bg-3); box-shadow: inset 3px 0 0 var(--accent); }
+
+.card-main { min-width: 0; flex: 1 1 auto; }
+.card-name {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-code { font-size: 11px; color: var(--code); font-family: Consolas, monospace; }
+.card-meta { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+
+.badge {
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+}
+/* цвет отражает силу: серый → сиреневый → золотой → красный */
+.b-normal   { background: #232a33; color: #8fa3b8; border-color: #313b47; }
+.b-elite    { background: #2a2733; color: #b39ddb; border-color: #3d3450; }
+.b-miniboss { background: #332a24; color: #e0a86a; border-color: #4d3a2a; }
+.b-boss     { background: #3a2323; color: #ef7a7a; border-color: #552e2e; }
+.b-building { background: #232a2a; color: #7f9a9a; border-color: #2e3d3d; }
+.b-container { background: #2b2820; color: #c0a97a; border-color: #40392a; }
+
+/* метка «может прийти охотником» в списке существ */
+.hunter-mark {
+  flex: 0 0 auto;
+  font-size: 13px;
+  line-height: 1;
+  opacity: .9;
+  cursor: help;
+}
+
+.empty-list { padding: 24px 14px; color: var(--fg-3); font-size: 13px; text-align: center; }
+
+/* --------------------------------------------------------- детали */
+
+.detail { overflow-y: auto; padding: 22px 26px 60px; min-height: 0; }
+.empty { color: var(--fg-3); text-align: center; margin-top: 80px; }
+
+.d-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px; }
+.d-title { font-size: 24px; font-weight: 600; }
+.d-code { font-size: 13px; color: var(--code); font-family: Consolas, monospace; margin-top: 3px; }
+.d-tags { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 12px;
+  color: var(--fg-2);
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 2px 10px;
+}
+.tag-link { cursor: pointer; }
+.tag-link:hover { color: var(--accent); border-color: var(--accent-2); }
+
+h2.sec {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fg-3);
+  font-weight: 600;
+  margin: 26px 0 10px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* разделители рисуем тенью, чтобы незанятые ячейки не выделялись фоном */
+.stat { padding: 9px 12px; box-shadow: inset -1px -1px 0 var(--line); }
+.stat-k { font-size: 11px; color: var(--fg-3); }
+.stat-v { font-size: 15px; margin-top: 1px; }
+.stat-v .unit { font-size: 11px; color: var(--fg-3); margin-left: 2px; }
+
+/* --------------------------------------------------------- таблица дропа */
+
+.drop-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.rate-note { font-size: 12px; color: var(--fg-3); }
+.rate-pill {
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid var(--accent-2);
+  border-radius: 10px;
+  padding: 2px 9px;
+}
+
+.drops { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.drops-head, .drop {
+  display: grid;
+  grid-template-columns: 34px 1fr 78px 78px;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 12px;
+}
+.drops-head {
+  background: var(--bg-3);
+  font-size: 11px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+/* у таблицы лута локации колонки шире — заголовки не переносятся:
+   лучший шанс за убийство, шанс и среднее количество за зачистку локации */
+.drops-loc .drops-head, .drops-loc .drop { grid-template-columns: 34px 1fr 92px 104px 118px; }
+
+.drop { border-top: 1px solid var(--line); cursor: pointer; }
+.drop:hover { background: var(--bg-3); }
+.drop.is-unknown .drop-name { color: var(--fg-3); }
+
+.drop-name { min-width: 0; }
+.drop-name > div:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drop-code { font-size: 11px; color: var(--code); font-family: Consolas, monospace; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.num-w { color: var(--fg-2); }
+.num-c { color: var(--accent); }
+
+.icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  object-fit: cover;
+  display: block;
+}
+.icon-ph {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--fg-3);
+  font-family: Consolas, monospace;
+}
+
+.note {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--fg-3);
+  line-height: 1.6;
+  border-left: 2px solid var(--line-2);
+  padding-left: 10px;
+}
+
+.note-hard { border-left-color: var(--accent-2); color: var(--fg-2); }
+
+/* ------------------------------------------ компактная сетка дропа */
+
+.drop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 6px;
+}
+.drop-cell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  background: var(--bg-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 0;
+}
+.drop-cell:hover { background: var(--bg-3); border-color: var(--accent-2); }
+.drop-cell.is-unknown .dc-name { color: var(--fg-3); }
+/* в ячейках сетки иконки крупнее, чем в списках и таблицах */
+.drop-cell .icon, .drop-cell .icon-ph {
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+  flex: 0 0 auto;
+}
+.drop-cell .icon-ph { font-size: 12px; }
+.dc-text { flex: 1 1 auto; min-width: 0; }
+.dc-name {
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dc-code {
+  font-size: 12px;
+  color: var(--code);
+  font-family: Consolas, monospace;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dc-chance {
+  flex: 0 0 auto;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------- откуда выпадает предмет */
+
+.src-list { display: flex; flex-direction: column; gap: 3px; }
+.src-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.src-row:hover { border-color: var(--accent-2); }
+.src-row .drop-name { flex: 1 1 auto; min-width: 0; }
+.src-chance { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 13px; }
+.mono { font-family: Consolas, monospace; color: var(--code); }
+
+/* пулы спавна и волны Пещеры жадности: карточка со списком «кто — с каким весом» */
+.pool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.pool-cell {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.pool-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.pool-id { font-family: Consolas, monospace; font-size: 12.5px; color: var(--accent-2); }
+.pool-meta { font-size: 11.5px; color: var(--fg-3); }
+.pool-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 2px 0;
+}
+.pool-line.is-link { cursor: pointer; border-radius: 4px; }
+.pool-line.is-link:hover { background: var(--bg-3); color: var(--accent-2); }
+.pool-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pool-name.is-pool { color: var(--fg-3); font-style: italic; }
+.pool-share { font-family: Consolas, monospace; font-size: 11.5px; color: var(--fg-3); flex: none; }
+
+/* инлайн-разметка в текстах FAQ: `код` и **жирный** */
+.inline-code {
+  font-family: Consolas, monospace;
+  font-size: 0.94em;
+  color: var(--code);
+  background: var(--bg-3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.desc-text strong, .note strong, .faq-list strong { color: var(--fg-1); font-weight: 600; }
+
+/* ------------------------------------------------- описание предмета */
+
+.desc {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent-2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.desc-action {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.desc-text { color: var(--fg-2); line-height: 1.6; }
+
+.tag-use { color: #7fc98a; border-color: #2c4032; }
+
+/* --------------------------------------- кто роняет предмет в локации */
+
+.drop-from {
+  font-size: 11px;
+  color: var(--fg-3);
+  margin-top: 3px;
+  line-height: 1.5;
+}
+.from-link { color: var(--fg-2); cursor: pointer; }
+.from-link:hover { color: var(--accent); text-decoration: underline; }
+
+.drops-item .drop-name > div:first-child { white-space: normal; }
+
+/* --------------------------------------------- категории расходников */
+
+.cats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.cats .lvl-btn { font-size: 12px; font-weight: 400; padding: 7px 4px; }
+
+/* ------------------------------------------------------- галочка-фильтр */
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+.check input { margin: 2px 0 0; accent-color: var(--accent); flex: 0 0 auto; }
+.check em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--fg-3);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------- крупные кнопки уровня предмета */
+
+.levels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+}
+.lvl-btn {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 0;
+  cursor: pointer;
+}
+.lvl-btn:hover { color: var(--fg); border-color: var(--accent-2); }
+.lvl-btn.is-active { background: var(--bg-3); color: var(--accent); border-color: var(--accent-2); }
+
+/* --------------------------------------------------- карточки и чипы */
+
+.card-item { align-items: center; }
+.card-item .icon, .card-item .icon-ph { flex: 0 0 auto; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  padding: 3px 10px 3px 4px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--accent-2); }
+.chip-boss { border-color: #552e2e; }
+
+/* --------------------------------------------------------- шапка предмета */
+
+.d-head-item { display: flex; gap: 16px; align-items: flex-start; }
+.d-head-text { min-width: 0; }
+.icon-lg, .icon-lg-ph {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+.icon-lg { border: 1px solid var(--line-2); background: var(--bg-3); object-fit: cover; }
+.icon-lg-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  color: var(--fg-3);
+  font-family: Consolas, monospace;
+}
+
+.tag-cost { color: var(--accent); border-color: var(--accent-2); }
+
+/* --------------------------------------------- характеристики с прокруткой */
+
+.roll-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.roll-hint { font-size: 12px; color: var(--fg-3); }
+
+.roll-toggle, .roll-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.roll-toggle:hover, .roll-btn:hover { color: var(--fg); border-color: var(--accent-2); }
+.roll-toggle.is-on, .roll-btn.is-on { background: var(--bg-3); color: var(--accent); border-color: var(--accent-2); }
+
+/* колонки: кнопки | подпись | разброс | ползунок или положения | значение */
+.roll-list .roll-row {
+  grid-template-columns: 116px 288px 124px 204px 118px;
+  cursor: default;
+}
+.roll-ctl { display: flex; gap: 4px; align-items: center; }
+.roll-btn { padding: 3px 7px; font-size: 11px; }
+.roll-na { color: var(--fg-3); font-size: 12px; }
+
+.roll-range-text { font-size: 12.5px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+
+.roll-range {
+  width: 100%;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.roll-range-pct { width: 130px; }
+
+/* положения прокрутки у свойств эффекта: делят колонку поровну, чтобы
+   ничего не вылезало за её пределы и клик работал по всей кнопке */
+.roll-steps { display: flex; gap: 4px; min-width: 0; }
+.roll-step {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 84px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.roll-step:hover { border-color: var(--accent-2); }
+.roll-step.is-on { background: var(--bg-3); border-color: var(--accent-2); font-weight: 600; }
+
+.roll-group {
+  padding: 9px 13px 7px;
+  background: var(--bg-3);
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--fg-3);
+}
+
+.roll-value { font-size: 14.5px; font-weight: 600; }
+
+/* цвет прокрутки ставится inline — как в клиенте игры;
+   у стата без прокрутки значение нейтральное */
+.t-fixed  { color: var(--fg-2); font-weight: 400; }
+
+/* метка «усил» красится по тиру надбавки, как в игре */
+.roll-btn.e-purple.is-on { color: #cf8cff; border-color: #6a3f9e; }
+.roll-btn.e-gold.is-on   { color: #ffcf8c; border-color: #a8802a; }
+.roll-btn.e-red.is-on    { color: #ff357c; border-color: #a8485a; }
+
+/* сравнение предка с обычным предметом */
+.cmp-list .drops-head, .cmp-list .cmp-row { grid-template-columns: 1fr 118px 118px 90px; }
+.cmp-row { cursor: default; }
+.cmp-delta { color: var(--accent); }
+
+/* -------------------------------------------------------- список статов */
+
+.stat-list .stat-row {
+  grid-template-columns: 1fr 90px;
+  border-top: 0;
+  cursor: default;
+}
+.stat-list .stat-row + .stat-row { border-top: 1px solid var(--line); }
+.stat-list .stat-row:hover { background: none; }
+
+/* ------------------------------------------------------ строки-ссылки */
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.link-row:hover { border-color: var(--accent-2); }
+.link-row .drop-name { flex: 1 1 auto; min-width: 0; }
+.arrow { font-size: 13px; color: var(--accent); white-space: nowrap; }
+.arrow:hover { text-decoration: underline; }
+
+.back {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--fg-3);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.back:hover { color: var(--accent); }
+
+/* ------------------------------------------------------- редкость */
+
+.q-1 { background: #232a33; color: #9aa7b5; border-color: #313b47; }
+.q-2 { background: #1f2c22; color: #7fc98a; border-color: #2c4032; }
+.q-3 { background: #1e2739; color: #74a9e8; border-color: #2b3a55; }
+.q-4 { background: #2a2340; color: #b183e8; border-color: #3d3157; }
+.q-5 { background: #33280f; color: #e0a83a; border-color: #4d3d1a; }
+.q-6 { background: #3a1f28; color: #ef6a7e; border-color: #552d38; }
+.q-7 { background: #3a3418; color: #f0d060; border-color: #554c22; }
+
+.footnote { margin-top: 34px; font-size: 11.5px; color: var(--fg-3); }
+
+/* ------------------------------------------------- метка «волна» в Небе */
+
+.wave-num {
+  flex: 0 0 auto;
+  width: 46px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.tag-on { color: var(--accent); border-color: var(--accent-2); background: var(--bg-3); }
+
+/* ------------------------------------ рамка иконки по качеству предмета */
+
+.icon.q-1, .icon-ph.q-1, .icon-lg.q-1, .icon-lg-ph.q-1 { border-color: #4a5560; }
+.icon.q-2, .icon-ph.q-2, .icon-lg.q-2, .icon-lg-ph.q-2 { border-color: #4f8a5c; }
+.icon.q-3, .icon-ph.q-3, .icon-lg.q-3, .icon-lg-ph.q-3 { border-color: #4a7bb5; }
+.icon.q-4, .icon-ph.q-4, .icon-lg.q-4, .icon-lg-ph.q-4 { border-color: #7a5bb5; }
+.icon.q-5, .icon-ph.q-5, .icon-lg.q-5, .icon-lg-ph.q-5 { border-color: #a8802a; }
+.icon.q-6, .icon-ph.q-6, .icon-lg.q-6, .icon-lg-ph.q-6 { border-color: #a8485a; }
+.icon.q-7, .icon-ph.q-7, .icon-lg.q-7, .icon-lg-ph.q-7 { border-color: #b8a63a; }
+
+/* ---------------------------- источник дропа: цвет по типу монстра */
+
+.src-cell { border-left: 3px solid var(--line-2); }
+.src-cell.b-normal   { border-left-color: #8fa3b8; }
+.src-cell.b-elite    { border-left-color: #b39ddb; }
+.src-cell.b-miniboss { border-left-color: #e0a86a; }
+.src-cell.b-boss     { border-left-color: #ef7a7a; }
+.src-cell.b-building { border-left-color: #7f9a9a; }
+.src-cell.b-container { border-left-color: #c0a97a; }
+
+/* --------------------------------- фильтр волн в «Небе» */
+
+.wave-btns { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.wave-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.wave-btn:hover { color: var(--fg); border-color: var(--accent-2); }
+.wave-btn.is-active { background: var(--bg-3); color: var(--accent); border-color: var(--accent-2); }
+
+/* в «Небе» панель на всю ширину — ячейки делаем заметно крупнее,
+   в бесконечке по ним проходят сотни предметов и граней */
+.layout-sky .drop-grid { grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 8px; }
+.layout-sky .drop-cell { padding: 14px 16px; gap: 13px; }
+.layout-sky .drop-cell .icon, .layout-sky .drop-cell .icon-ph { width: 52px; height: 52px; border-radius: 9px; }
+.layout-sky .dc-name { font-size: 16px; }
+.layout-sky .dc-code { font-size: 13px; }
+.layout-sky .dc-chance { font-size: 16px; }
+
+/* ячейка волны в бесконечке: клик — фильтр по этой волне */
+.wave-cell.is-active { background: var(--bg-3); border-color: var(--accent-2); }
+
+/* ползунок уровня перековки в шапке раздела характеристик */
+.roll-range-refine { width: 92px; }
+
+/* ============================== вкладка «Монстры»: три столбца ==========
+   слева выбор и список существ, в середине предметы в дропе + карта,
+   справа карточка. Столбцы фиксированной ширины — так списки не «прыгают»
+   при переключении вкладок. */
+
+.layout-monsters { grid-template-columns: 340px 300px 1fr; }
+
+.col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.col-head {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+
+/* локация + кнопка «весь лут» одной строкой */
+.loc-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.btn-loot {
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 0 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-loot:hover { color: var(--fg); border-color: var(--accent-2); }
+
+/* кнопки типов: босс → мини-босс → элитник → обычный → контейнер */
+.types { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip-btn {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.chip-btn:hover { color: var(--fg); border-color: var(--line-2); }
+.chip-btn.is-active { background: var(--bg-3); color: var(--accent); border-color: var(--accent-2); }
+
+.list-head { display: flex; align-items: center; gap: 8px; }
+.list-head .count { flex: 1 1 auto; }
+.input-mini {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 3px 6px;
+  color: var(--fg-2);
+}
+.btn-icon {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 7px;
+  cursor: pointer;
+}
+.btn-icon:hover { color: var(--fg); border-color: var(--accent-2); }
+
+/* ------------------------------------------------- столбец предметов */
+
+.col-items { background: var(--bg-2); }
+.items-top { display: flex; align-items: center; gap: 8px; }
+.seg-andor { flex: 0 0 auto; }
+.seg-andor .seg-btn { padding: 4px 10px; font-size: 12.5px; }
+.check-inline { flex: 1 1 auto; font-size: 12px; }
+
+.chips-picked { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  background: var(--bg-3);
+  border: 1px solid var(--accent-2);
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 12px;
+  padding: 3px 4px 3px 8px;
+}
+.chip-pick-clear {
+  background: none;
+  border: 0;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 3px 2px;
+}
+.chip-pick-clear:hover { color: var(--fg); }
+
+.list-items { padding: 4px 0; }
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.item-row:hover { background: var(--bg-3); }
+.item-row.is-picked { background: var(--bg-3); border-left-color: var(--accent); }
+.item-row-main { flex: 1 1 auto; min-width: 0; }
+.item-row-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-row-code { font-size: 11px; color: var(--code); font-family: Consolas, monospace; }
+.item-row-meta { flex: 0 0 auto; text-align: right; }
+.item-row-count { font-size: 11px; color: var(--fg-3); }
+.item-row-best { font-size: 12.5px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.icon-sm, .icon-sm-ph { width: 26px !important; height: 26px !important; border-radius: 4px !important; }
+.icon-sm-ph { font-size: 10px !important; }
+
+/* карта локации под списком предметов: заглушка, пока картинки нет */
+.map-box {
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  max-height: 250px;
+  min-height: 108px;
+  margin: 10px 12px 12px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  background:
+    repeating-linear-gradient(45deg, transparent 0 9px, rgba(255, 255, 255, .015) 9px 18px),
+    var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--fg-3);
+}
+.map-ph-title { font-size: 13px; color: var(--fg-2); }
+.map-ph-sub { font-size: 11.5px; }
+.map-ph-note { font-size: 11px; color: var(--fg-3); max-width: 90%; text-align: center; }
+
+/* карта есть: убираем рамку заглушки и растягиваем картинку */
+.map-box.has-map {
+  aspect-ratio: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  gap: 5px;
+  min-height: 0;
+}
+.map-canvas { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+.map-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-2);
+}
+/* точки спавна выбранного существа */
+.map-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: #ff3b3b;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 59, 59, .95);
+  cursor: help;
+}
+/* точка охотника: не спавн, а место, откуда приходит волна */
+.map-dot-hunter {
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  background: #ffb020;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .75), 0 0 9px rgba(255, 176, 32, .95);
+}
+.map-cap {
+  font-size: 11.5px;
+  color: var(--fg-3);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* --------------------------------------- лут локации: пропуски и ячейки */
+
+/* «пропуск» между смысловыми блоками в карточке локации */
+.section-gap { height: 34px; }
+
+.g-rows { display: flex; flex-direction: column; gap: 2px; }
+.g-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.g-row-head { display: flex; align-items: center; gap: 8px; flex: 0 0 260px; min-width: 0; }
+.g-row-name {
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g-row-name:hover { color: var(--accent); }
+.g-row-items { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.g-row-items img, .g-row-items div { cursor: pointer; }
+
+.num-total { color: var(--fg); }
+.num-avg { color: var(--fg-2); }
+
+/* строка спавнов в карточке существа */
+.spawn-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.spawn-room { flex: 0 0 auto; color: var(--fg-2); }
+.spawn-groups {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.spawn-note { font-size: 12px; color: var(--fg-3); }
+
+/* галочка «За локацию» в шапке дропа */
+.check-zone { margin-left: auto; flex: 0 0 auto; }
+.check-zone-text {
+  font-size: 12px;
+  color: var(--fg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.check-zone input { margin-right: 5px; }
+.check-zone input:checked + .check-zone-text { color: var(--accent); border-color: var(--accent-2); }
+
+.note.no-top { margin-top: 0; margin-bottom: 10px; }
+
+/* --------------------------------- вкладка «Предметы»: уровни в столбце */
+
+.levels { display: flex; flex-direction: column; gap: 3px; }
+.level-row { display: flex; gap: 3px; }
+.level-row .subtab {
+  flex: 1 1 0;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 6px 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+}
+.level-row .subtab.is-active { border-color: var(--accent-2); }
+.level-row-all .subtab { flex: 1 1 100%; }
+
+/* рецепт крафта: рецепт → предмет, ниже состав */
+.craft-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.craft-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 0;
+}
+.craft-cell:hover { border-color: var(--accent-2); }
+.craft-arrow { color: var(--accent); font-size: 18px; }
+.craft-needs-label {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.craft-needs { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+/* состав — три колонки: иконка, название, количество (в таблице дропа их четыре) */
+.craft-needs .drop { grid-template-columns: 34px 1fr 64px; }
+
+/* ================================ вкладка «Крафт» ======================= */
+
+.layout-craft {
+  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.craft-head {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 12px 20px 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.craft-filters { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.craft-levels { display: flex; flex-wrap: wrap; gap: 3px; }
+.craft-levels .chip-btn { min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; }
+.craft-side { flex: 0 0 250px; display: flex; flex-direction: column; gap: 8px; }
+.craft-side .chip-btn { text-align: left; }
+.craft-side .chip-btn.is-active { background: var(--bg-3); color: var(--accent); border-color: var(--accent-2); }
+.craft-side .reset { align-self: flex-start; }
+
+/* три колонки: предмет → дерево создания → итог */
+.craft-body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  padding: 14px 20px 20px;
+  min-height: 0;
+}
+
+/* ------------------------------------------------- слева: создаваемый предмет */
+.craft-left { flex: 0 0 272px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.craft-left .list { flex: 1 1 auto; min-height: 0; }
+
+.craft-main {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 12px;
+  flex: 0 0 auto;
+}
+.craft-main-top { display: flex; gap: 10px; align-items: flex-start; }
+.craft-main-name { font-size: 15px; font-weight: 600; }
+.craft-main-code { font-size: 11.5px; color: var(--code); }
+.craft-main-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.craft-main-bottom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.craft-own-price { font-size: 13px; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------- в центре: дерево создания */
+.craft-tree-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.craft-tree-head {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--line);
+}
+.craft-tree-head .check-inline { font-size: 12px; }
+.craft-tree {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;          /* ветки уходят вбок, поэтому прокрутка по обеим осям */
+  padding: 10px 12px 18px;
+}
+
+/* ветки прямых материалов — в строку, а материалы внутри ветки — вниз с отступом */
+.branches { display: flex; align-items: flex-start; gap: 20px; }
+.branch { flex: 0 0 auto; min-width: 212px; }
+.branch + .branch { padding-left: 20px; border-left: 1px dashed var(--line); }
+.tree-level + .tree-level { margin-top: 6px; }
+.tree-kids {
+  margin: 6px 0 0 12px;
+  padding-left: 10px;
+  border-left: 1px dashed var(--line);
+}
+
+/* блок узла: иконка · название/id · количество, ниже строка цен */
+.node {
+  flex: 0 0 210px;
+  width: 210px;
+  padding: 6px 8px 7px;
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.node.is-link { cursor: pointer; }
+.node.is-link:hover { border-color: var(--line-2); }
+
+.node-head { display: flex; align-items: flex-start; gap: 7px; }
+.node-text { min-width: 0; flex: 1 1 auto; }
+.node-name {
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-code {
+  font-size: 10.5px;
+  color: var(--code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-count {
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.node-prices {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 3px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.node-price, .node-cost { text-align: center; font-variant-numeric: tabular-nums; }
+.node-cost { color: var(--fg-2); }
+.node-dash { display: block; text-align: center; }
+
+.node-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 4px;
+  text-align: center;
+  outline: none;
+}
+.node-input:focus { border-color: var(--accent-2); }
+.node-input::placeholder { color: var(--fg-3); }
+
+/* обводка: где покупать выгоднее, чем крафтить (и наоборот) */
+.node.is-buy { border-color: #9c4141; }
+.node.is-buy .node-cost { color: #d47a7a; }
+.node.is-craft { border-color: #3f7a4a; }
+.node.is-craft .node-cost { color: #6fbf7f; }
+.node.is-unknown { border-style: dashed; border-color: #5a3a3a; }
+.node.is-unknown .node-name { color: var(--fg-3); }
+
+.tree-note { padding: 4px 8px; font-size: 11.5px; color: var(--fg-3); font-style: italic; }
+
+/* --------------------------------------------- справа: итог по созданию */
+.craft-sum {
+  flex: 0 0 324px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 12px;
+}
+.craft-sum h3 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 600;
+}
+.craft-sum > * + h3 { margin-top: 18px; }
+.sum-block { display: flex; flex-direction: column; gap: 5px; }
+.sum-line { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; font-size: 12.5px; }
+.sum-line span:first-child { color: var(--fg-2); }
+.sum-line b { margin-left: auto; font-variant-numeric: tabular-nums; text-align: right; }
+.sum-total { font-size: 15px; color: var(--accent); }
+.sum-verdict { margin-top: 10px; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; border: 1px solid var(--line-2); }
+.sum-verdict.is-buy { border-color: #9c4141; color: #d47a7a; }
+.sum-verdict.is-craft { border-color: #3f7a4a; color: #6fbf7f; }
+.sum-note { font-size: 11.5px; color: var(--fg-3); margin-top: 8px; }
+.craft-sum .craft-farm { margin-top: 2px; }
+.craft-sum-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.craft-sum-head .check-inline { font-size: 11px; }
+
+/* сводка материалов: сколько всего нужно и откуда падает */
+.sum-mats { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.sum-mat { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.sum-mat:hover .sum-mat-name { color: var(--accent); }
+.sum-mat-text { min-width: 0; flex: 1 1 auto; }
+.sum-mat-head { display: flex; align-items: baseline; gap: 6px; }
+.sum-mat-name { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
+.sum-mat-count {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.sum-mat-code { font-size: 10.5px; color: var(--code); }
+.sum-mat-locs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.sum-mat-locs .tag { font-size: 11px; }
+.sum-mat-nodrop { font-size: 11px; color: var(--fg-3); font-style: italic; }
+.sum-mat-more { color: var(--fg-3); }
+
+/* -------------------------------------------------- поле «цена на бирже» */
+.auction-field { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-3); }
+.auction-label { white-space: nowrap; }
+.auction-input { width: 96px; flex: 0 0 auto; font-size: 12.5px; padding: 3px 6px; }
+.auction-cur { color: var(--fg-3); }
+.craft-main .auction-field { margin-left: auto; }
+
+.craft-parts { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.craft-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px 3px 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 0;
+}
+.craft-part:hover { border-color: var(--accent-2); }
+.craft-part-text { min-width: 0; }
+.craft-part-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.craft-part-count { font-size: 11px; color: var(--fg-3); }
+.craft-recipe { border-color: var(--accent-2); }
+.craft-norecipe { font-size: 11.5px; color: var(--fg-3); }
+.craft-noformula { font-style: italic; }
+
+
+.craft-price { text-align: right; }
+.craft-price-v { font-size: 14px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.craft-price-sub { font-size: 11px; color: var(--fg-3); }
+
+.craft-ess { display: flex; align-items: center; gap: 6px; }
+
+.craft-farm { display: flex; flex-wrap: wrap; gap: 4px; }
+.craft-farm .tag { font-size: 11.5px; }
+.craft-farm-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.craft-farm-head .check-inline { font-size: 11px; text-transform: none; letter-spacing: 0; }
+.tag-craft { border: 1px dashed var(--accent-2); color: var(--accent); }
+
+/* компонент состава, которого нет в данных сборки (висячая ссылка) */
+.craft-part.is-unknown { border-style: dashed; border-color: #5a3a3a; }
+.craft-part.is-unknown .craft-part-name { color: var(--fg-3); }
+.craft-part.is-unknown .craft-part-count { color: #b06a6a; }
+
+/* плашки источников: платный магазин и гача */
+.src-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-gacha { border-color: #7a5ea8; color: #c9a6ff; }
+.tag-mall { border-color: var(--accent-2); color: var(--accent); }
+
+/* переключатель локаций на карте: существо может спавниться в нескольких */
+.map-switch {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(20, 22, 28, .88);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 11.5px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.map-switch:hover { color: var(--fg); border-color: var(--accent-2); }
+
+/* ============================== вкладка «Прокачка» ======================
+   Дерево талантов: узлы расставлены по layout_col/layout_row, связи needs
+   нарисованы коленами из div'ов (.tline). Клик по узлу снимает его с расчёта. */
+
+.layout-prog {
+  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.prog-top {
+  flex: 0 0 auto;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.prog-top .subtabs { border-bottom: 0; padding: 0 20px; }
+
+.chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 20px 12px;
+}
+
+.prog-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 22px 40px;
+}
+
+.prog-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 22px;
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+}
+.prog-hint { flex: 1 1 auto; font-size: 12px; color: var(--fg-3); }
+.field-inline { display: flex; align-items: center; gap: 8px; }
+.field-inline .field-label { white-space: nowrap; }
+
+/* --- сетка дерева */
+
+/* только горизонтальная прокрутка: по вертикали дерево всегда влезает */
+.tree-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+.tree-canvas { position: relative; }
+
+.tnode {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+.tnode:hover { border-color: var(--accent); }
+.tnode.lvl-2 { box-shadow: inset 0 0 0 2px rgba(200, 160, 74, .3); }
+.tnode.lvl-3 { box-shadow: inset 0 0 0 2px rgba(200, 160, 74, .65); }
+.tnode.is-off { opacity: .32; filter: grayscale(1); border-style: dashed; }
+.tnode-icon { width: 44px; height: 44px; }
+.tnode-icon-ph {
+  font-size: 11px;
+  color: var(--code);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.tnode-root { position: absolute; right: 3px; top: 1px; font-size: 10px; color: var(--accent); }
+.tline { position: absolute; background: var(--line-2); }
+.tline.main { background: var(--accent-2); }
+
+/* --- ресурсы под деревом */
+
+.res-block { margin-top: 26px; }
+.res-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.res-sub { font-size: 12px; color: var(--fg-3); }
+.res-gold { display: flex; align-items: baseline; gap: 12px; margin: 10px 0; flex-wrap: wrap; }
+.res-gold-label { font-size: 11px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; }
+.res-gold-value { font-size: 21px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.res-gold-per { font-size: 12px; color: var(--fg-3); }
+.res-clears { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+
+.res-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 6px;
+}
+.res-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.res-cell .icon, .res-cell .icon-ph { width: 32px; height: 32px; }
+.res-cell.is-unknown { opacity: .7; }
+.res-text { min-width: 0; flex: 1 1 auto; }
+.res-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.res-code { font-size: 10.5px; color: var(--code); font-family: Consolas, monospace; }
+.res-count { color: var(--accent); font-variant-numeric: tabular-nums; }
+.res-cell > .res-clears { flex: 0 0 auto; }
+
+/* ---------- связь «талант → крафт» (вкладки «Предметы» и «Крафт») ---------- */
+
+/* узел дерева, открывающий крафт: рамка и мигание, когда на него пришли по ссылке */
+.tnode.is-focus { border-color: var(--accent); }
+@keyframes tnode-blink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 160, 74, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(200, 160, 74, .45); }
+}
+.tnode.is-focus { animation: tnode-blink .7s ease-in-out 4; }
+
+.craft-talent { border-color: var(--accent-2); }
+.craft-talent .craft-part-name { color: var(--accent); }
+
+/* подвкладки внутри карточки — у гильдейского торговца сдача и покупка */
+.subtabs-inline {
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  margin: 6px 0 14px;
+  background: none;
+}
+
+/* ============================== вкладка «Продавцы» =======================
+   Ячейки крупнее, чем в других вкладках (у торговца важны иконка, качество и
+   цена), плюс постраничный вывод и цвет фона под уровень заказа. */
+
+.vend-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.vend-grid .res-cell { padding: 10px 12px; gap: 13px; }
+.vend-grid .res-cell .icon, .vend-grid .res-cell .icon-ph { width: 48px; height: 48px; border-radius: 9px; }
+.vend-grid .res-name { font-size: 15px; }
+.vend-grid .res-code { font-size: 12px; }
+.vend-grid .res-count { font-size: 14px; white-space: nowrap; }
+
+/* цена в древних монетах — зелёная */
+.res-count.coin { color: #7fdc8d; }
+
+/* фон ячейки под уровень заказа у гильдейского торговца */
+.vend-grid .res-cell.lvl-1 { background: rgba(143, 163, 184, .20); border-color: #8fa3b8; box-shadow: inset 3px 0 0 #8fa3b8; }
+.vend-grid .res-cell.lvl-2 { background: rgba(154, 211, 160, .18); border-color: #9ad3a0; box-shadow: inset 3px 0 0 #9ad3a0; }
+.vend-grid .res-cell.lvl-3 { background: rgba(179, 157, 219, .20); border-color: #b39ddb; box-shadow: inset 3px 0 0 #b39ddb; }
+.vend-grid .res-cell.lvl-4 { background: rgba(224, 168, 106, .20); border-color: #e0a86a; box-shadow: inset 3px 0 0 #e0a86a; }
+
+.wave-btn.lvl-1.is-active { border-color: #8fa3b8; color: #cdd8e4; }
+.wave-btn.lvl-2.is-active { border-color: #9ad3a0; color: #cfe9d3; }
+.wave-btn.lvl-3.is-active { border-color: #b39ddb; color: #ded1f2; }
+.wave-btn.lvl-4.is-active { border-color: #e0a86a; color: #f2dcc2; }
+
+/* панель фильтров над списком: поиск, качество, рецепты */
+.vend-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 12px;
+}
+.vend-search { width: 260px; }
+.vend-quality { margin-bottom: 0; }
+.vend-quality .wave-btn { min-width: 30px; padding: 0 9px; }
+.vend-recipes { font-size: 13px; color: var(--fg-2); }
+
+
+/* пометка «в работе» у вкладки «Продавцы» */
+.wip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(224, 168, 106, .18);
+  border: 1px solid #e0a86a;
+  color: #e0a86a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  vertical-align: 1px;
+}
+.vend-wip {
+  padding: 8px 20px;
+  background: rgba(224, 168, 106, .12);
+  border-bottom: 1px solid #e0a86a55;
+  color: #e0c9a8;
+  font-size: 12px;
+}
+
+/* ================================ вкладка «FAQ» ==========================
+   Слева — навигация по разделам (как список монстров), справа — содержимое. */
+
+.layout-faq { grid-template-columns: 290px 1fr; }
+.col-faq .card-sub { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+
+/* ссылка на предмет/монстра/талант внутри текста: иконка + название */
+.faq-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px dotted var(--accent-2);
+  vertical-align: -5px;
+  max-width: 100%;
+}
+.faq-link:hover { color: var(--accent-2); }
+.faq-link .faq-link-name { min-width: 0; }
+.faq-link .icon-xs, .faq-link .icon-ph.icon-xs {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+/* в таблицах иконки не должны ломать строки */
+.faq-row .faq-link { vertical-align: middle; }
+.faq-cols .faq-row { align-items: center; }
+
+/* компактные колонки таблиц (например, уровни опыта по 10 в ряд) */
+.faq-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 8px 0 14px;
+}
+.faq-cols .faq-table-wrap { flex: 1 1 260px; min-width: 220px; margin: 0; }
+.faq-compact .faq-row { padding: 3px 10px; font-size: 12.5px; }
+
+/* выбор дроп-пула и список предметов пула */
+.pool-browser { margin: 8px 0 16px; }
+.pool-pick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.pool-select { width: auto; min-width: 320px; }
+.pool-use { font-size: 12.5px; color: var(--fg-3); }
+.pool-stat { font-size: 12.5px; color: var(--fg-3); margin-bottom: 8px; }
+.pool-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 6px;
+}
+.pool-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  min-width: 0;
+}
+.pool-item.is-link { cursor: pointer; }
+.pool-item.is-link:hover { background: var(--bg-3); border-color: var(--accent-2); }
+.pool-item .icon-sm, .pool-item .icon-ph.icon-sm { width: 30px; height: 30px; border-radius: 5px; flex: 0 0 auto; }
+.pool-item-text { min-width: 0; flex: 1 1 auto; }
+.pool-item-name { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pool-item-code { font-size: 10.5px; color: var(--fg-3); font-family: Consolas, monospace; }
+.pool-item-chance { font-size: 12.5px; color: var(--accent); white-space: nowrap; flex: 0 0 auto; }
+
+/* ================================ вкладка «FAQ» (оформление) ==============
+   Разделы — подвкладки, содержимое — блоки: текст, список, таблица, заметка. */
+
+.faq-list { margin: 10px 0 10px 20px; padding: 0; }
+.faq-list li { margin: 5px 0; line-height: 1.55; color: var(--fg-2); }
+.faq-list li::marker { color: var(--accent-2); }
+
+.faq-table-wrap { overflow-x: auto; margin: 12px 0; }
+.faq-table {
+  display: inline-block;
+  min-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.faq-row { display: flex; }
+.faq-row > span {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--fg-2);
+  min-width: 0;
+}
+.faq-row > span:last-child { border-right: 0; }
+.faq-row > span:first-child { flex: 0 0 240px; color: var(--fg); }
+.faq-row > span:not(:first-child) { flex: 1 1 160px; }
+.faq-row:last-child > span { border-bottom: 0; }
+.faq-head > span { background: var(--bg-3); font-weight: 600; color: var(--fg); }
+.faq-table + .desc-text { margin-top: 12px; }

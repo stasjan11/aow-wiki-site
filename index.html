@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOW — вики</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="brand-mark">AOW</span>
+    <span class="brand-sub">вики</span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab is-active" data-tab="monsters">Монстры и дроп</button>
+    <button class="tab" data-tab="items">Предметы</button>
+    <button class="tab" data-tab="consumables">Расходники</button>
+    <button class="tab" data-tab="sky">Небо</button>
+    <button class="tab" data-tab="craft">Крафт</button>
+    <button class="tab" data-tab="progression">Прокачка</button>
+    <button class="tab" data-tab="vendors">Продавцы <span class="wip">WIP</span></button>
+    <button class="tab" data-tab="minigames">Мини-игры</button>
+    <button class="tab" data-tab="faq">FAQ</button>
+  </nav>
+</header>
+
+<!-- ============================= МОНСТРЫ ============================= -->
+<main class="layout layout-monsters" id="pane-monsters" hidden>
+
+  <aside class="col col-mon">
+    <div class="col-head">
+      <div class="field">
+        <span class="field-label">Сложность локации</span>
+        <div class="seg" id="diff"></div>
+      </div>
+
+      <div class="loc-row">
+        <select id="loc" class="input" title="Локация"></select>
+        <button type="button" id="locLoot" class="btn-loot" title="Показать всё, что падает в этой локации">Весь лут →</button>
+      </div>
+
+      <input type="search" id="q" class="input" placeholder="Поиск монстра…" autocomplete="off">
+
+      <div class="types" id="type"></div>
+
+      <div class="list-head">
+        <span id="count" class="count"></span>
+        <select id="sort" class="input input-mini" title="Сортировка внутри типа">
+          <option value="level">по уровню</option>
+          <option value="name">по названию</option>
+          <option value="location">по локации</option>
+          <option value="drops">по числу предметов</option>
+        </select>
+        <button type="button" id="reset" class="btn-icon" title="Сбросить фильтры">⟲</button>
+      </div>
+    </div>
+    <div id="list" class="list"></div>
+  </aside>
+
+  <section class="col col-items">
+    <div class="col-head">
+      <div class="items-top">
+        <div class="seg seg-andor" id="andor"></div>
+        <label class="check check-inline" title="Рецепт выпадает один раз и больше не попадётся">
+          <input type="checkbox" id="noRecipes">
+          <span>Не учитывать рецепты</span>
+        </label>
+      </div>
+
+      <input type="search" id="itemQ" class="input" placeholder="Поиск предмета…" autocomplete="off">
+      <div id="itemChips" class="chips-picked" hidden></div>
+      <div class="list-head">
+        <span id="itemCount" class="count"></span>
+      </div>
+    </div>
+    <div id="itemList" class="list list-items"></div>
+    <div class="map-box" id="mapBox"></div>
+  </section>
+
+  <section class="detail" id="detail">
+    <div class="empty">Выберите монстра слева</div>
+  </section>
+
+</main>
+
+<!-- ============================= ПРЕДМЕТЫ ============================= -->
+<main class="layout" id="pane-items" hidden>
+
+  <div class="sidebar">
+    <div class="filters">
+      <div class="levels" id="ilevels"></div>
+
+      <label class="field">
+        <span class="field-label">Тип</span>
+        <select id="itype" class="input"></select>
+      </label>
+
+      <input type="search" id="iq" class="input" placeholder="Поиск предмета…" autocomplete="off">
+
+      <button type="button" id="ireset" class="reset">Сбросить фильтры</button>
+    </div>
+
+    <div class="list-head">
+      <span id="icount" class="count"></span>
+    </div>
+    <div id="ilist" class="list"></div>
+  </div>
+
+  <div class="right">
+    <section class="detail" id="idetail">
+      <div class="empty">Выберите предмет слева</div>
+    </section>
+  </div>
+
+</main>
+
+<!-- ============================ РАСХОДНИКИ ============================ -->
+<main class="layout" id="pane-consumables" hidden>
+
+  <aside class="sidebar">
+    <div class="filters">
+      <div class="field">
+        <span class="field-label">Категория</span>
+        <div class="cats" id="ccat"></div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Подтип</span>
+        <select id="csub" class="input"></select>
+      </label>
+
+      <input type="search" id="cq" class="input" placeholder="Поиск расходника…" autocomplete="off">
+
+      <button type="button" id="creset" class="reset">Сбросить фильтры</button>
+    </div>
+
+    <div class="list-head">
+      <span id="ccount" class="count"></span>
+    </div>
+    <div id="clist" class="list"></div>
+  </aside>
+
+  <section class="detail" id="cdetail">
+    <div class="empty">Выберите расходник слева</div>
+  </section>
+
+</main>
+
+<!-- ================================ КРАФТ ============================= -->
+<main class="layout layout-craft" id="pane-craft" hidden>
+
+  <div class="craft-head">
+    <div class="craft-filters">
+      <div class="craft-levels" id="craftLevels"></div>
+      <div class="types" id="craftTypes"></div>
+      <input type="search" id="craftQ" class="input" placeholder="Поиск предмета…" autocomplete="off">
+      <span id="craftCount" class="count"></span>
+    </div>
+    <div class="craft-side">
+      <label class="field">
+        <span class="field-label">Цена эссенции — легендарной</span>
+        <input type="number" id="essencePrice" class="input" min="0" step="500" value="8000">
+      </label>
+      <button type="button" id="profSell" class="chip-btn">Выгодно для продажи</button>
+      <button type="button" id="profDis" class="chip-btn">Выгодно для разбора</button>
+      <button type="button" id="craftReset" class="reset">Сбросить</button>
+    </div>
+  </div>
+
+  <div class="craft-body">
+
+    <!-- слева — основной создаваемый предмет и список того, что ещё можно выбрать -->
+    <aside class="craft-left" id="craftLeft"></aside>
+
+    <!-- в центре — дерево создания -->
+    <section class="craft-tree-wrap">
+      <div class="craft-tree-head">
+        <label class="check check-inline" title="Материалы вроде слитков и ткани по умолчанию не раскрываются — видно только, что они нужны. Галочка добавляет один уровень: показывается, из чего делается сам материал">
+          <input type="checkbox" id="craftMatDepth">
+          <span>+ уровень дерева для материалов</span>
+        </label>
+      </div>
+      <div class="craft-tree" id="craftTree"></div>
+    </section>
+
+    <!-- справа — итог по созданию и где предмет взять -->
+    <aside class="craft-sum" id="craftSum"></aside>
+
+  </div>
+
+</main>
+
+<!-- ============================== ПРОКАЧКА ============================ -->
+<main class="layout layout-prog" id="pane-progression" hidden>
+
+  <div class="prog-top">
+    <div class="subtabs" id="progTabs"></div>
+    <div class="chips-row" id="progHeroes" hidden></div>
+  </div>
+
+  <div class="prog-scroll" id="progTree"></div>
+
+  <div class="prog-bar">
+    <span class="prog-hint">Клик по узлу отмечает его как прокачанный — он перестаёт учитываться в ресурсах. Отметки хранятся в браузере и переживают перезагрузку страницы.</span>
+    <label class="field field-inline">
+      <span class="field-label">Локация для фарма</span>
+      <select id="progLoc" class="input input-mini"></select>
+    </label>
+    <button type="button" id="progReset" class="reset">Сбросить отметки</button>
+  </div>
+
+</main>
+
+<!-- ============================= ПРОДАВЦЫ ============================= -->
+<main class="layout layout-sky" id="pane-vendors" hidden>
+
+  <div class="right">
+    <div class="vend-wip">Вкладка в работе (WIP): данные уточняются, оформление ещё будет меняться.</div>
+    <div class="subtabs" id="vendTabs"></div>
+    <section class="detail" id="vendDetail">
+      <div class="empty">Выберите торговца</div>
+    </section>
+  </div>
+
+</main>
+
+<!-- ============================= МИНИ-ИГРЫ ============================ -->
+<main class="layout layout-sky" id="pane-minigames" hidden>
+
+  <div class="right">
+    <div class="subtabs" id="mgtabs"></div>
+    <section class="detail" id="mgdetail">
+      <div class="empty">Выберите мини-игру</div>
+    </section>
+  </div>
+
+</main>
+
+<!-- ================================= FAQ =============================== -->
+<main class="layout layout-faq" id="pane-faq" hidden>
+
+  <aside class="col col-faq">
+    <div class="col-head">
+      <input type="search" id="faqSearch" class="input" placeholder="Поиск по разделам…" autocomplete="off">
+    </div>
+    <div class="list" id="faqTabs"></div>
+  </aside>
+
+  <section class="detail" id="faqDetail">
+    <div class="empty">Выберите раздел</div>
+  </section>
+
+</main>
+
+<!-- ================================ НЕБО ============================== -->
+<main class="layout layout-sky" id="pane-sky" hidden>
+
+  <div class="right">
+    <div class="subtabs" id="skytabs"></div>
+    <section class="detail" id="skydetail">
+      <div class="empty">Выберите подвкладку</div>
+    </section>
+  </div>
+
+</main>
+
+<script src="data/meta.js"></script>
+<script src="data/items.js"></script>
+<script src="data/stones.js"></script>
+<script src="data/pools.js"></script>
+<script src="data/greed.js"></script>
+<script src="data/monsters.js"></script>
+<script src="data/minigames.js"></script>
+<script src="data/progression.js"></script>
+<script src="data/vendors.js"></script>
+<script src="data/faq.js"></script>
+<script src="data/maps.js"></script>
+<script src="data/craft.js"></script>
+<script src="data/sources.js"></script>
+<script src="app.js"></script>
+<script src="farm.js"></script>
+<script src="tab-monsters.js"></script>
+<script src="tab-craft.js"></script>
+<script src="tab-items.js"></script>
+<script src="tab-consumables.js"></script>
+<script src="tab-sky.js"></script>
+<script src="tab-progression.js"></script>
+<script src="tab-vendors.js"></script>
+<script src="tab-faq.js"></script>
+<script src="tab-minigames.js"></script>
+</body>
+</html>
