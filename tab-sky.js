@@ -341,6 +341,14 @@
           `босс — ${bss.amount}. Если вся команда погибла, остаётся ${Math.round((co.deathRetain || 0.5) * 100)} %. ` +
           `Вытяжек за заход: ⌊кристаллы ÷ ${cr.coinsPerDraw}⌋ + бонус уровня.`));
       }
+      const ex = cr.expected;
+      if (ex) {
+        box.appendChild(el('div', 'note note-hard',
+          `В среднем за полный заход (${ex.floors} этажей) набирается ~${ex.crystals.toLocaleString('ru-RU')} ` +
+          `кристаллов: уровень сундука ${ex.level}, ~${ex.draws} вытяжек и ` +
+          `~${ex.coins.toLocaleString('ru-RU')} древних монет — без талантов, при гибели команды ` +
+          'кристаллов вдвое меньше.'));
+      }
       box.appendChild(el('div', 'note note-hard',
         `Древние монеты («Древняя монета», ${cr.ancientItemId}) капают вместе с предметами: ` +
         `⌈кристаллы × ${cr.ancientPerCoin} × множитель уровня⌉, плюс таланты «Древний дар» ` +
