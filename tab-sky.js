@@ -287,12 +287,13 @@
       cell.appendChild(head);
       for (const m of c.members) {
         const line = el('div', 'pool-line');
-        line.appendChild(el('span', 'pool-name' + (m.pool ? ' is-pool' : ''), m.pool ? `↳ ${m.id}` : m.name));
+        const roleRu = m.role === 'elite' ? ' (элита)' : m.role === 'normal' ? ' (обычный)' : '';
+        line.appendChild(el('span', 'pool-name' + (m.pool ? ' is-pool' : ''), (m.pool ? `↳ ${m.id}` : m.name) + roleRu));
         line.appendChild(el('span', 'pool-share', `${m.x}, ${m.y}`));
         if (!m.pool) {
           line.classList.add('is-link');
           line.onclick = () => go('monsters', m.id);
-          line.title = `${m.id} — открыть во вкладке монстров`;
+          line.title = `${m.id} — роль ${m.role || 'boss (по умолчанию)'} — открыть во вкладке монстров`;
         }
         cell.appendChild(line);
       }
@@ -301,7 +302,9 @@
     box.appendChild(grid);
     box.appendChild(el('div', 'note',
       'Координаты в подсказке — смещения от центра площадки: по ним видно, как расставлены монстры ' +
-      '(например, три в линию или по кругу). Вес — относительный шанс выбрать это комбо из его группы.'));
+      '(например, три в линию или по кругу). Вес — относительный шанс выбрать это комбо из его группы. ' +
+      'Роль участника (boss/элита/обычный) задаёт и его силу, и кристаллы с него: в босс-комбо бывают ' +
+      'элитные и обычные спутники — они дают свои кристаллы, а не боссовские.'));
     box.appendChild(footnote());
   }
 
