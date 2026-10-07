@@ -72,6 +72,10 @@
       ['omni_crit_chance_pct', 'Шанс общего крита, %'],
       ['crit_damage_pct', 'Урон от крита, %'],
     ]],
+    ['Сезон', [
+      ['season_contribution', 'Уровень личного вклада', 0, { season: 20 }],
+      ['season_world', 'Уровень мира', 0, { season: 10 }],
+    ]],
     ['Прочее', [
       ['block', 'Блок'],
       ['extra_backpack_slot_limit', 'Слоты рюкзака'],
@@ -142,6 +146,11 @@
     runes: state.runes.map((r) => (r ? { id: r.id } : null)),
   });
 
+  // Сумка/рюкзак — по названию («Сумка…», «Рюкзак…», «Мешок …»). Стат
+  // extra_backpack_slot_limit признаком не является: его дают и обычные предметы
+  // («Сапоги путешественника» +5, «Обломок брони» +2, «Наручи» +1).
+  const isBagItem = (i) => /(сумка|сумки|рюкзак|мешок\s)/i.test(i.name || '');
+
   const primary = () => HERO_PRIMARY[state.hero] || 'str';
 
   // ------------------------------------------------------------------ расчёты
@@ -199,6 +208,7 @@
 
   const total = (key, attrsFn) => {
     const base = Number(state.base[key]) || 0;
+    if (attrsFn && attrsFn.season) return { base, items: 0, fromAttrs: 0, sum: base, season: attrsFn.season };
     const items = poolSum(key);
     const fromAttrs = !attrsFn ? 0 : attrsFn === 'all-stats' ? poolSum('bonus_all_stats') : attrAdd(attrsFn);
     return { base, items, fromAttrs, sum: base + items + fromAttrs };
@@ -260,7 +270,9 @@
       'Впиши статы из игры без предметов — и атрибуты, и то, что от них зависит (здоровье, броню, МС, урон от атаки): ' +
       'панель уже включает прибавки твоих базовых атрибутов. Дальше предметы прибавляются сами, а вклад атрибутов считается разницей — ' +
       'чтобы ничего не посчиталось дважды. Если хочешь, чтобы калькулятор считал HP, броню и остальное от атрибутов полностью — ' +
-      'оставь эти поля пустыми и переключи режим на «считать целиком».'));
+      'оставь эти поля пустыми и переключи режим на «считать целиком». ' +
+      'Уровни сезона (вклад и мир) дают по +2 % урона и −2 % получаемого за уровень и работают в самом конце — ' +
+      'после брони, независимыми множителями.'));
 
     const table = el('table', 'calc-table');
     const thead = el('thead');
@@ -281,26 +293,43 @@
       tbody.appendChild(g);
       for (const [key, label, dec, attrsFn] of rows) {
         const t = total(key, attrsFn);
+        const season = t.season;
         const tr = el('tr');
         tr.appendChild(el('td', 'calc-name', label));
         const b = el('td', 'calc-num');
         const inp = document.createElement('input');
         inp.className = 'calc-input';
         inp.type = 'text';
-        inp.inputMode = 'decimal';
+        inp.inputMode = 'numeric';
         inp.value = state.base[key] != null ? state.base[key] : '';
         inp.placeholder = '0';
+        inp.title = season ? `От 0 до ${season}` : '';
         inp.oninput = () => {
           const v = inp.value.trim().replace(',', '.');
           if (v === '') delete state.base[key];
-          else if (!isNaN(Number(v))) state.base[key] = Number(v);
-          else return;
+          else if (!isNaN(Number(v))) {
+            const n = Math.max(0, Math.min(season || 1e9, Math.round(Number(v))));
+            state.base[key] = n;
+            if (season && String(n) !== v) inp.value = String(n); // уровень — целое, с потолком
+          } else return;
           save();
           refreshTotals();
         };
         inp.onblur = () => renderStats();
         b.appendChild(inp);
         tr.appendChild(b);
+        if (season) {
+          // сезонные уровни: не пул статов, а финальный множитель — показываем проценты
+          const pct = 2 * t.base;
+          tr.appendChild(el('td', 'calc-num calc-zero', '—'));
+          tr.appendChild(el('td', 'calc-num calc-zero', '—'));
+          const cell = el('td', 'calc-num calc-total', pct ? `+${pct} % урона, −${pct} % получаемого` : '—');
+          cell.title = 'Сезонные баффы применяются в самом конце, после брони; уровни вклада и мира — независимые множители';
+          tr.appendChild(cell);
+          rowCells[key] = { season: true, cell, total: cell, items: null, attr: null };
+          tbody.appendChild(tr);
+          continue;
+        }
         const itemsCell = el('td', 'calc-num' + (t.items ? '' : ' calc-zero'), fmtNum(t.items, dec));
         const attrCell = el('td', 'calc-num' + (t.fromAttrs ? ' calc-attr' : ' calc-zero'), t.fromAttrs ? fmtNum(t.fromAttrs, dec) : '—');
         const totalCell = el('td', 'calc-num calc-total', fmtNum(t.sum, dec));
@@ -331,6 +360,11 @@
       for (const [key, label, dec, attrsFn] of list) {
         const cell = rowCells[key];
         if (!cell) continue;
+        if (cell.season) {
+          const pct = 2 * (Number(state.base[key]) || 0);
+          cell.cell.textContent = pct ? `+${pct} % урона, −${pct} % получаемого` : '—';
+          continue;
+        }
         const t = total(key, attrsFn);
         cell.items.textContent = fmtNum(t.items, dec);
         cell.items.className = 'calc-num' + (t.items ? '' : ' calc-zero');
@@ -552,10 +586,9 @@
   function pickFilter(key) {
     if (key.kind === 'rune') return (i) => i.type === 'gem' && i.gem && (!i.gem.profession || i.gem.profession === state.hero);
     if (key.kind === 'pet') return (i) => /^item_pet_/.test(i.id) && i.type === 'equip';
-    if (key.kind === 'bag') return (i) => i.type === 'equip' && (/^★?\s*(Сумка|Рюкзак)/i.test(i.name || '') || (i.stats || []).some((s) => s.key === 'extra_backpack_slot_limit'));
+    if (key.kind === 'bag') return (i) => i.type === 'equip' && isBagItem(i);
     if (key.kind === 'neutral') return (i) => i.type === 'equip' && i.neutral === true;
-    return (i) => i.inGame !== false && i.type === 'equip' && !/^item_pet_/.test(i.id) && !i.neutral &&
-      !/^★?\s*(Сумка|Рюкзак)/i.test(i.name || '') && !(i.stats || []).some((s) => s.key === 'extra_backpack_slot_limit');
+    return (i) => i.inGame !== false && i.type === 'equip' && !/^item_pet_/.test(i.id) && !i.neutral && !isBagItem(i);
   }
 
   function renderPick() {
