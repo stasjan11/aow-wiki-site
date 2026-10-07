@@ -643,12 +643,13 @@
     if (i.cave && i.cave.length) {
       const stages = (kind) => [...new Set(i.cave.filter((d) => d.kind === kind).map((d) => d.stage))]
         .sort((a, b) => a - b);
-      const wavesOf = (list) => list.map((s) => s * 3).join(', ');
+      const wavesOf = (kind) => [...new Set(i.cave.filter((d) => d.kind === kind).map((d) => d.wave))]
+        .sort((a, b) => a - b).join(', ');
       const bosses = stages('boss');
       const merchants = stages('merchant');
       const parts = [];
-      if (bosses.length) parts.push(`награда боссов ${bosses.join(', ')} (волны ${wavesOf(bosses)})`);
-      if (merchants.length) parts.push(`у торговцев на этапах ${merchants.join(', ')} (волны ${wavesOf(merchants)})`);
+      if (bosses.length) parts.push(`награда боссов ${bosses.join(', ')} (волны ${wavesOf('boss')})`);
+      if (merchants.length) parts.push(`у торговцев уровня ${merchants.join(', ')} (волны ${wavesOf('merchant')})`);
       if (parts.length) {
         box.appendChild(el('h2', 'sec', 'Бесконечка Пещеры жадности'));
         const line = el('div', 'note note-hard', 'Встречается в бесконечном режиме: ' + parts.join('; ') + '.');
@@ -1276,7 +1277,7 @@
     const box = el('div', 'note note-hard');
     box.appendChild(document.createTextNode(
       'Падает в Пещере жадности, волны: ' + waves.join(', ') +
-      ` (боссы ${s.drops.map((d) => d.boss).join(', ')} × 3).`
+      ` (боссы ${s.drops.map((d) => d.boss).join(', ')}).`
     ));
     return box;
   }

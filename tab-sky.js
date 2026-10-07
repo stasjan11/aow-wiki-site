@@ -103,7 +103,7 @@
     box.appendChild(head);
 
     box.appendChild(el('div', 'desc-text',
-      'Монстры растут от этажа, а не от номера волны: три волны = один этаж. ' +
+      'Монстры растут от этажа (в бесконечке волна — это и есть этаж). ' +
       'У обычных тиров одна кривая на все три башни, в бесконечке — своя таблица.'));
 
     // сколько монстров спавнится на обычной волне (константы открытого конфига релиза)
@@ -402,7 +402,7 @@
 
     const head = el('div', 'd-head');
     head.appendChild(el('div', 'd-title', 'Бесконечка'));
-    head.appendChild(el('div', 'd-code', 'GCE_BOSS · волна = номер босса × 3'));
+    head.appendChild(el('div', 'd-code', 'GCE_BOSS · волна = уровень босса × 3'));
     const tags = el('div', 'd-tags');
     ['', 'stones', 'equipment'].forEach((k) => {
       const b = el('span', 'tag tag-link' + (state.kind === k ? ' tag-on' : ''), k === '' ? 'Всё' : KIND_RU[k]);
@@ -451,13 +451,13 @@
     for (const w of waves) {
       const active = String(state.wave) === String(w.wave);
       const cell = el('div', 'drop-cell wave-cell' + (active ? ' is-active' : ''));
-      cell.title = `Волна ${w.wave} — босс ${w.boss} (уровень ${w.level})\n` +
+      cell.title = `Волна ${w.wave} — босс ${w.boss} (пул ${w.poolId})\n` +
         `Снаряжение: ${w.equipment.length}\nГрани: ${w.stones.length}\n\n` +
         (active ? 'Клик — снять фильтр по этой волне' : 'Клик — показать дроп этой волны');
       cell.appendChild(el('div', 'wave-num', String(w.wave)));
       const txt = el('div', 'dc-text');
       txt.appendChild(el('div', 'dc-name', `Босс ${w.boss}`));
-      txt.appendChild(el('div', 'dc-code', `ур. ${w.level} · ${w.equipment.length} снаряж. · ${w.stones.length} граней`));
+      txt.appendChild(el('div', 'dc-code', `${w.poolId} · ${w.equipment.length} снаряж. · ${w.stones.length} граней`));
       cell.appendChild(txt);
       cell.onclick = () => { state.wave = active ? '' : w.wave; render(); };
       wgrid.appendChild(cell);
@@ -513,7 +513,7 @@
 
       cell.title = mode === 'waves'
         ? `${e.name}\n${e.id}\n\nВыпадает с боссов бесконечки:\n` +
-          waves.map((w) => `с босса ${w.boss}, волна ${w.wave} (ур. ${w.level}): ${pct(w.chance)}`).join('\n')
+          waves.map((w) => `с босса ${w.boss}, волна ${w.wave}: ${pct(w.chance)}`).join('\n')
         : mode === 'chest'
           ? `${e.name}\n${e.id}\n\nСундук: ${rec.from}\nДоля в пуле: ${pct(rec.chance)}`
           : `${e.name}\n${e.id}`;
