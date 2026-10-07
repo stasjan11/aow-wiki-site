@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AOW — вики</title>
-<link rel="stylesheet" href="style.css?v=202610071538">
+<link rel="stylesheet" href="style.css?v=202610071555">
 </head>
 <body>
 
@@ -22,8 +22,9 @@
     <button class="tab" data-tab="progression">Прокачка</button>
     <button class="tab" data-tab="vendors">Продавцы <span class="wip">WIP</span></button>
     <button class="tab" data-tab="minigames">Мини-игры</button>
-    <button class="tab" data-tab="calc">Калькулятор <span class="wip">WIP</span></button>
     <button class="tab" data-tab="faq">FAQ</button>
+    <!-- вкладка «Калькулятор» (WIP) скрыта: пустая кнопка после FAQ, адрес #calc -->
+    <button class="tab tab-ghost" data-tab="calc" aria-label="Калькулятор (WIP)"></button>
   </nav>
 </header>
 
@@ -242,7 +243,7 @@
 <!-- ================================= FAQ =============================== -->
 <!-- ========================= КАЛЬКУЛЯТОР (WIP) ======================== -->
 <main class="layout layout-calc" id="pane-calc" hidden>
-  <div class="calc-wip">Вкладка в работе (WIP): считает статы сборки — база героя (вписывается руками), предметы в 6 слотах и нейтральном, 3 руны, прокрутка статов как в карточке предмета. Пока не учитываются: проценты атрибутов, таланты, сеты, способности и боевые эффекты предметов; руны статов не добавляют — они правят параметры способностей героя.</div>
+  <div class="calc-wip">Вкладка в работе (WIP): считает статы сборки — база героя (вписывается руками), предметы в 6 слотах, нейтральном, у питомца и в сумке, 3 руны, прокрутка статов как в карточке предмета. Пока не учитываются: проценты атрибутов, таланты, сеты, способности и боевые эффекты предметов; руны статов не добавляют — они правят параметры способностей героя.</div>
   <section class="calc-stats" id="calcStats"></section>
   <section class="calc-side">
     <div id="calcInv"></div>
@@ -279,31 +280,31 @@
 
 </main>
 
-<script src="data/meta.js?v=202610071538"></script>
-<script src="data/items.js?v=202610071538"></script>
-<script src="data/stones.js?v=202610071538"></script>
-<script src="data/pools.js?v=202610071538"></script>
-<script src="data/greed.js?v=202610071538"></script>
-<script src="data/monsters.js?v=202610071538"></script>
-<script src="data/minigames.js?v=202610071538"></script>
-<script src="data/progression.js?v=202610071538"></script>
-<script src="data/vendors.js?v=202610071538"></script>
-<script src="data/faq.js?v=202610071538"></script>
-<script src="data/maps.js?v=202610071538"></script>
-<script src="data/craft.js?v=202610071538"></script>
-<script src="data/sources.js?v=202610071538"></script>
-<script src="app.js?v=202610071538"></script>
-<script src="farm.js?v=202610071538"></script>
-<script src="itemroll.js?v=202610071538"></script>
-<script src="tab-monsters.js?v=202610071538"></script>
-<script src="tab-craft.js?v=202610071538"></script>
-<script src="tab-items.js?v=202610071538"></script>
-<script src="tab-consumables.js?v=202610071538"></script>
-<script src="tab-sky.js?v=202610071538"></script>
-<script src="tab-progression.js?v=202610071538"></script>
-<script src="tab-vendors.js?v=202610071538"></script>
-<script src="tab-faq.js?v=202610071538"></script>
-<script src="tab-minigames.js?v=202610071538"></script>
-<script src="tab-calc.js?v=202610071538"></script>
+<script src="data/meta.js?v=202610071555"></script>
+<script src="data/items.js?v=202610071555"></script>
+<script src="data/stones.js?v=202610071555"></script>
+<script src="data/pools.js?v=202610071555"></script>
+<script src="data/greed.js?v=202610071555"></script>
+<script src="data/monsters.js?v=202610071555"></script>
+<script src="data/minigames.js?v=202610071555"></script>
+<script src="data/progression.js?v=202610071555"></script>
+<script src="data/vendors.js?v=202610071555"></script>
+<script src="data/faq.js?v=202610071555"></script>
+<script src="data/maps.js?v=202610071555"></script>
+<script src="data/craft.js?v=202610071555"></script>
+<script src="data/sources.js?v=202610071555"></script>
+<script src="app.js?v=202610071555"></script>
+<script src="farm.js?v=202610071555"></script>
+<script src="itemroll.js?v=202610071555"></script>
+<script src="tab-monsters.js?v=202610071555"></script>
+<script src="tab-craft.js?v=202610071555"></script>
+<script src="tab-items.js?v=202610071555"></script>
+<script src="tab-consumables.js?v=202610071555"></script>
+<script src="tab-sky.js?v=202610071555"></script>
+<script src="tab-progression.js?v=202610071555"></script>
+<script src="tab-vendors.js?v=202610071555"></script>
+<script src="tab-faq.js?v=202610071555"></script>
+<script src="tab-minigames.js?v=202610071555"></script>
+<script src="tab-calc.js?v=202610071555"></script>
 </body>
 </html>

@@ -42,19 +42,19 @@
   // итоговых СИЛ/ЛОВ/ИНТ и подмешивается в «итого»).
   const GROUPS = [
     ['Атрибуты', [
-      ['bonus_strength', 'Сила', 0, (a) => a.all],
-      ['bonus_agility', 'Ловкость', 0, (a) => a.all],
-      ['bonus_intelligence', 'Интеллект', 0, (a) => a.all],
+      ['bonus_strength', 'Сила', 0, 'all-stats'],
+      ['bonus_agility', 'Ловкость', 0, 'all-stats'],
+      ['bonus_intelligence', 'Интеллект', 0, 'all-stats'],
       ['bonus_all_stats', 'Все атрибуты'],
     ]],
     ['Здоровье и мана', [
       ['bonus_health', 'Здоровье', 0, (a) => a.str * ATTR.hpPerStr],
       ['health_regen', 'Регенерация здоровья', 1, (a) => a.str * ATTR.regenPerStr],
-      ['bonus_mana', 'Мана', 0, (a) => a.int * ATTR.manaPerInt],
+      ['bonus_mana', 'Мана', 1, (a) => a.int * ATTR.manaPerInt],
       ['mana_regen', 'Регенерация маны', 2, (a) => a.int * ATTR.manaRegenPerInt],
     ]],
     ['Атака', [
-      ['bonus_attack_damage', 'Урон от атаки', 0, (a) => a.primaryBonus],
+      ['bonus_attack_damage', 'Урон от атаки', 1, (s) => primaryDmg(s, primary())], // 0.8 урона за пункт — бывает дробным
       ['all_attack_damage_percent', 'Урон от атаки, %'],
       ['attack_speed', 'Скорость атаки', 1, (a) => agiAs(a.agi)],
       ['attack_speed_pct', 'Скорость атаки, %'],
@@ -71,6 +71,10 @@
       ['magical_crit_chance_pct', 'Шанс маг. крита, %'],
       ['omni_crit_chance_pct', 'Шанс общего крита, %'],
       ['crit_damage_pct', 'Урон от крита, %'],
+    ]],
+    ['Прочее', [
+      ['block', 'Блок'],
+      ['extra_backpack_slot_limit', 'Слоты рюкзака'],
     ]],
     ['Усилители урона', [
       ['outgoing_damage_pct', 'Бонус к урону, %'],
@@ -92,10 +96,12 @@
     slots: Array(6).fill(null),     // { id, roll:{}, fix:[], enhance:[], divine, enhancePct, refine }
     neutral: null,
     pet: null,
+    bag: null,
     runes: Array(3).fill(null),     // { id } — руны статов не дают, только способности
     sel: null,                      // что открыто в редакторе: {kind, i}
     pick: null,                     // что выбираем: {kind, i}
     pickQ: '',
+    attrMode: 'delta',   // 'delta' — прибавки только от предметов, 'full' — считать от атрибутов целиком
   });
 
   const saved = store.get('calc', null) || {};
@@ -104,9 +110,11 @@
   state.slots = Array.from({ length: 6 }, (_, i) => hydrate(saved.slots && saved.slots[i]));
   state.neutral = hydrate(saved.neutral);
   state.pet = hydrate(saved.pet);
+  state.bag = hydrate(saved.bag);
   state.runes = Array.from({ length: 3 }, (_, i) => ((saved.runes || [])[i] ? { id: saved.runes[i].id } : null));
   state.sel = null;
   state.pick = null;
+  if (state.attrMode !== 'full') state.attrMode = 'delta';
 
   // state предмета хранит Set'ы — в localStorage они уходят массивами
   function hydrate(e) {
@@ -129,8 +137,8 @@
     };
   }
   const save = () => store.set('calc', {
-    hero: state.hero, base: state.base,
-    slots: state.slots.map(dehydrate), neutral: dehydrate(state.neutral), pet: dehydrate(state.pet),
+    hero: state.hero, base: state.base, attrMode: state.attrMode,
+    slots: state.slots.map(dehydrate), neutral: dehydrate(state.neutral), pet: dehydrate(state.pet), bag: dehydrate(state.bag),
     runes: state.runes.map((r) => (r ? { id: r.id } : null)),
   });
 
@@ -150,7 +158,7 @@
     return out;
   }
 
-  const equipped = () => [...state.slots, state.neutral, state.pet].filter(Boolean);
+  const equipped = () => [...state.slots, state.neutral, state.pet, state.bag].filter(Boolean);
 
   // Сумма по всем слотам (руны не в счёт — у них нет статов панели)
   function poolSum(key) {
@@ -159,22 +167,40 @@
     return sum;
   }
 
-  // Итоговые атрибуты: база руками + предметы (сила/ловкость/интеллект + «все атрибуты»)
-  function attrs() {
+  // Атрибуты: «база» — то, что вписано руками (как в игре без предметов),
+  // «итого» — плюс атрибуты от предметов.
+  function attrSets() {
     const num = (k) => Number(state.base[k]) || 0;
-    const all = () => poolSum('bonus_all_stats');
-    const str = num('bonus_strength') + poolSum('bonus_strength') + all();
-    const agi = num('bonus_agility') + poolSum('bonus_agility') + all();
-    const int = num('bonus_intelligence') + poolSum('bonus_intelligence') + all();
-    const p = primary();
-    const primaryBonus = (p === 'uni' ? str + agi + int : p === 'str' ? str : p === 'agi' ? agi : int) * (p === 'uni' ? ATTR.dmgPerUniversal : ATTR.dmgPerPrimary);
-    return { str, agi, int, all: all(), primary: p, primaryBonus };
+    const allItems = poolSum('bonus_all_stats');
+    const base = {
+      str: num('bonus_strength') + num('bonus_all_stats'),
+      agi: num('bonus_agility') + num('bonus_all_stats'),
+      int: num('bonus_intelligence') + num('bonus_all_stats'),
+    };
+    const total = {
+      str: base.str + poolSum('bonus_strength') + allItems,
+      agi: base.agi + poolSum('bonus_agility') + allItems,
+      int: base.int + poolSum('bonus_intelligence') + allItems,
+    };
+    return { base, total };
   }
+  const primaryDmg = (s, p) => (p === 'uni'
+    ? (s.str + s.agi + s.int) * ATTR.dmgPerUniversal
+    : (p === 'str' ? s.str : p === 'agi' ? s.agi : s.int) * ATTR.dmgPerPrimary);
+
+  // Прибавка от атрибутов. В режиме «только от предметов» считается РАЗНИЦА
+  // между итоговыми и вписанными атрибутами: панель из игры уже включает
+  // прибавки твоих базовых статов (HP от силы, броня от ловкости и т. д.),
+  // поэтому иначе они посчитались бы дважды.
+  const attrAdd = (fn) => {
+    const { base, total } = attrSets();
+    return state.attrMode === 'full' ? fn(total) : fn(total) - fn(base);
+  };
 
   const total = (key, attrsFn) => {
     const base = Number(state.base[key]) || 0;
     const items = poolSum(key);
-    const fromAttrs = attrsFn ? attrsFn(attrs()) : 0;
+    const fromAttrs = !attrsFn ? 0 : attrsFn === 'all-stats' ? poolSum('bonus_all_stats') : attrAdd(attrsFn);
     return { base, items, fromAttrs, sum: base + items + fromAttrs };
   };
 
@@ -201,6 +227,22 @@
     const p = primary();
     heroWrap.appendChild(el('span', 'calc-hero-note', p === 'uni' ? 'универсал' : `основной: ${p === 'str' ? 'сила' : p === 'agi' ? 'ловкость' : 'интеллект'}`));
     head.appendChild(heroWrap);
+    // прибавки от атрибутов: от предметов (по разнице) или целиком
+    const modes = el('div', 'calc-modes');
+    const mkMode = (mode, label, title) => {
+      const b = el('button', 'calc-mode' + (state.attrMode === mode ? ' is-on' : ''), label);
+      b.type = 'button';
+      b.title = title;
+      b.onclick = () => { state.attrMode = mode; save(); renderAll(); };
+      modes.appendChild(b);
+    };
+    mkMode('delta', 'Статы от атрибутов: только от предметов',
+      'Впиши панель из игры без предметов — она уже включает прибавки твоих базовых атрибутов (HP от силы, броня от ловкости и т. д.). ' +
+      'В этом режиме калькулятор прибавит только то, что дали предметы. Чтобы не считать дважды, впиши и атрибуты тоже.');
+    mkMode('full', 'считать целиком',
+      'Считать прибавки атрибутов полностью. Подходит, если вписываешь только атрибуты, а HP, ману, броню, МС и урон оставляешь пустыми: ' +
+      'тогда калькулятор посчитает их от атрибутов сам.');
+    head.appendChild(modes);
     const reset = el('button', 'calc-reset', 'Сбросить всё');
     reset.type = 'button';
     reset.title = 'Очистить базу, слоты и руны';
@@ -215,7 +257,10 @@
     head.appendChild(reset);
     box.appendChild(head);
     box.appendChild(el('div', 'calc-hint',
-      'Впиши сюда статы из игры **без предметов** (панель персонажа), дальше предметы будут прибавляться сами.'));
+      'Впиши статы из игры без предметов — и атрибуты, и то, что от них зависит (здоровье, броню, МС, урон от атаки): ' +
+      'панель уже включает прибавки твоих базовых атрибутов. Дальше предметы прибавляются сами, а вклад атрибутов считается разницей — ' +
+      'чтобы ничего не посчиталось дважды. Если хочешь, чтобы калькулятор считал HP, броню и остальное от атрибутов полностью — ' +
+      'оставь эти поля пустыми и переключи режим на «считать целиком».'));
 
     const table = el('table', 'calc-table');
     const thead = el('thead');
@@ -227,7 +272,6 @@
     thead.appendChild(hr);
     table.appendChild(thead);
     const tbody = el('tbody');
-    const a = attrs();
     rowCells = {};
     for (const [group, rows] of GROUPS) {
       const g = el('tr', 'calc-group');
@@ -283,7 +327,6 @@
 
   function refreshTotals() {
     if (!rowCells) return;
-    const a = attrs();
     for (const [group, list] of GROUPS) {
       for (const [key, label, dec, attrsFn] of list) {
         const cell = rowCells[key];
@@ -312,7 +355,7 @@
     box.textContent = '';
     const head = el('div', 'calc-head');
     head.appendChild(el('div', 'calc-title', 'Инвентарь'));
-    head.appendChild(el('span', 'calc-hero-note', 'как в игре: 6 слотов, нейтральный, питомец и 3 руны'));
+    head.appendChild(el('span', 'calc-hero-note', 'как в игре: 6 слотов, нейтральный, питомец, сумка и 3 руны'));
     box.appendChild(head);
 
     const wrap = el('div', 'calc-inv');
@@ -323,6 +366,7 @@
     const side = el('div', 'calc-extra');
     side.appendChild(slotNode(state.neutral, { kind: 'neutral' }, 'Нейтральный слот'));
     side.appendChild(slotNode(state.pet, { kind: 'pet' }, 'Питомец'));
+    side.appendChild(slotNode(state.bag, { kind: 'bag' }, 'Сумка'));
     wrap.appendChild(side);
     box.appendChild(wrap);
 
@@ -334,11 +378,12 @@
     box.appendChild(runeBox);
   }
 
-  const kindKey = (k) => (k.kind === 'slot' ? state.slots[k.i] : k.kind === 'neutral' ? state.neutral : k.kind === 'pet' ? state.pet : state.runes[k.i]);
+  const kindKey = (k) => (k.kind === 'slot' ? state.slots[k.i] : k.kind === 'neutral' ? state.neutral : k.kind === 'pet' ? state.pet : k.kind === 'bag' ? state.bag : state.runes[k.i]);
   function setKind(k, value) {
     if (k.kind === 'slot') state.slots[k.i] = value;
     else if (k.kind === 'neutral') state.neutral = value;
     else if (k.kind === 'pet') state.pet = value;
+    else if (k.kind === 'bag') state.bag = value;
     else state.runes[k.i] = value;
   }
   const sameSel = (a, b) => !!a && !!b && a.kind === b.kind && a.i === b.i;
@@ -507,8 +552,10 @@
   function pickFilter(key) {
     if (key.kind === 'rune') return (i) => i.type === 'gem' && i.gem && (!i.gem.profession || i.gem.profession === state.hero);
     if (key.kind === 'pet') return (i) => /^item_pet_/.test(i.id) && i.type === 'equip';
+    if (key.kind === 'bag') return (i) => i.type === 'equip' && (/^★?\s*(Сумка|Рюкзак)/i.test(i.name || '') || (i.stats || []).some((s) => s.key === 'extra_backpack_slot_limit'));
     if (key.kind === 'neutral') return (i) => i.type === 'equip' && i.neutral === true;
-    return (i) => i.inGame !== false && i.type === 'equip' && !/^item_pet_/.test(i.id) && !i.neutral;
+    return (i) => i.inGame !== false && i.type === 'equip' && !/^item_pet_/.test(i.id) && !i.neutral &&
+      !/^★?\s*(Сумка|Рюкзак)/i.test(i.name || '') && !(i.stats || []).some((s) => s.key === 'extra_backpack_slot_limit');
   }
 
   function renderPick() {
@@ -518,7 +565,7 @@
     box.hidden = false;
     box.textContent = '';
     const head = el('div', 'calc-head');
-    const titles = { slot: 'Выбор предмета', neutral: 'Нейтральный предмет', pet: 'Питомец', rune: 'Руна для ' + state.hero };
+    const titles = { slot: 'Выбор предмета', neutral: 'Нейтральный предмет', pet: 'Питомец', bag: 'Сумка (рюкзак)', rune: 'Руна для ' + state.hero };
     head.appendChild(el('div', 'calc-title', titles[key.kind] || 'Выбор'));
     const close = el('button', 'calc-reset', 'Закрыть');
     close.type = 'button';
