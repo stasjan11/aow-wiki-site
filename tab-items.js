@@ -102,6 +102,11 @@
   // они не участвуют. Но с кого они всё-таки падают — показать надо: для них
   // отдельный индекс, где рецепты считаются вместе с остальным пулом.
   const RECIPE_SOURCES = {};
+  // Гарантированный первый дроп (`poolFirst`) — механика другая: из списка выпадает
+  // ровно один предмет (выбор по весу), поэтому доля считается внутри самого списка,
+  // а не как шанс за убийство. Без этого индекса предметы, которые выпадают только
+  // первым дропом (например, рецепт «Сапог путешественника»), выглядели как «без источника».
+  const FIRST_SOURCES = {};
   for (const m of MONSTERS) {
     // на сложной сложности к пулу добавляется DiffDropPool, веса складываются
     const acc = new Map();
@@ -125,8 +130,16 @@
     const all = [...acc.values()];
     add(SOURCES, all.filter((e) => e.type !== 'blueprint'));
     add(RECIPE_SOURCES, all.filter((e) => e.type === 'blueprint'));
+
+    const first = m.poolFirst || [];
+    const firstTotal = first.reduce((s, e) => s + e.weight, 0);
+    if (firstTotal) {
+      for (const e of first) {
+        (FIRST_SOURCES[e.id] = FIRST_SOURCES[e.id] || []).push({ m, chance: e.weight / firstTotal });
+      }
+    }
   }
-  for (const list of [SOURCES, RECIPE_SOURCES]) {
+  for (const list of [SOURCES, RECIPE_SOURCES, FIRST_SOURCES]) {
     for (const k in list) list[k].sort((a, b) => b.chance - a.chance);
   }
 
@@ -632,11 +645,34 @@
         ? 'Шанс — с одного убийства на сложной сложности, пока рецепт ещё в пуле: ' +
           'выпав один раз, он из пулов исчезает. Считан вместе с остальными предметами пула.'
         : 'Шанс — с одного убийства на сложной сложности. Рецепты исключены из пула ' +
-          '(они выпадают один раз), гарантированный первый дроп не учитывается.'));
-    } else if (i.isRecipe) {
+          '(они выпадают один раз), гарантированный первый дроп — отдельной строкой ниже.'));
+    } else if (i.isRecipe && !(FIRST_SOURCES[i.id] || []).length) {
       box.appendChild(el('h2', 'sec', 'Выпадает с монстров'));
       box.appendChild(el('div', 'note',
         'Ни у одного монстра в дропе этого рецепта нет — источников в данных не нашлось.'));
+    }
+
+    // --- гарантированный первый дроп (poolFirst): один предмет из списка за убийство,
+    // выбор по весу. У рецептов обычного дропа часто нет вовсе, а первый дроп есть —
+    // без этой строки карточка писала «источников не нашлось».
+    const firstDrop = FIRST_SOURCES[i.id] || [];
+    if (firstDrop.length) {
+      box.appendChild(el('h2', 'sec', 'Первый дроп'));
+      const line = el('div', 'note note-hard');
+      line.appendChild(document.createTextNode('Гарантированный первый дроп: '));
+      firstDrop.forEach((s, n) => {
+        if (n) line.appendChild(document.createTextNode(', '));
+        const a = el('span', 'faq-link');
+        a.appendChild(el('span', 'faq-link-name', s.m.name));
+        a.title = `Открыть «${s.m.name}» (${s.m.id})`;
+        a.onclick = () => go('monsters', s.m.id);
+        line.appendChild(a);
+        line.appendChild(document.createTextNode(` — ${pct(s.chance)}`));
+      });
+      line.appendChild(document.createTextNode(
+        ' (доля в списке; выпадает один предмет из него — у обычных монстров за первое ' +
+        'убийство, у боссов повторяется на 1, 3, 5, 10, 35 и 100-м убийстве).'));
+      box.appendChild(line);
     }
 
     // --- Пещера жадности: бесконечка (боссы/торговцы) и сундук-награда тиров
