@@ -1882,6 +1882,13 @@ h2.sec {
   align-items: center; gap: 8px; padding: 3px 0;
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
+/* у предка пары «предмет · грань» и колонка «Итог» (сумма) */
+.calc-stats-list.is-pair .calc-stat-row {
+  grid-template-columns: minmax(120px, 1.2fr) 60px minmax(56px, 1fr) 84px 126px 62px;
+}
+.calc-stats-list.is-pair .calc-stat-name.is-sub { padding-left: 16px; color: var(--fg-3); }
+.calc-stats-list.is-pair .calc-stat-row.is-stone-sub { border-bottom-style: dashed; }
+.calc-total-cell { font-weight: 600; text-align: right; font-size: 13px; color: var(--accent); }
 .calc-stat-name { color: var(--fg-2); font-size: 13px; }
 .calc-stat-val { font-weight: 600; text-align: right; font-size: 13px; }
 .calc-stat-bounds { color: var(--fg-3); font-size: 12px; text-align: right; }

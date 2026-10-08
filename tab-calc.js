@@ -528,11 +528,40 @@
       return;
     }
 
-    const list = el('div', 'calc-stats-list');
-    for (const s of item.stats) {
-      list.appendChild(statRow(entry, item, s));
+    // У предка статы показываются парой с гранью и итогом (как в карточке предмета):
+    // строки «предмет» и «↳ грань» друг под другом, справа у первой строки — сумма.
+    const stone = item.fromStone && ITEMS[item.fromStone];
+    const list = el('div', 'calc-stats-list' + (stone ? ' is-pair' : ''));
+    if (!stone) {
+      for (const s of item.stats) list.appendChild(statRow(entry, item, s));
+      box.appendChild(list);
+    } else {
+      const gEntry = stoneState(entry);
+      const byKey = (arr, k) => (arr || []).find((s) => s.key === k);
+      const valueOf = (e, s, isStone) => R.rollValue(s,
+        e.roll[s.key] != null ? e.roll[s.key] : (isStone ? 50 : R.defaultRoll(s, e)), e);
+      const keys = [];
+      for (const s of item.stats || []) keys.push(s.key);
+      for (const s of stone.stats || []) if (!keys.includes(s.key)) keys.push(s.key);
+      for (const k of keys) {
+        const ownS = byKey(item.stats, k);
+        const gS = byKey(stone.stats, k);
+        const sum = (ownS ? valueOf(entry, ownS, false) : 0) + (gS ? valueOf(gEntry, gS, true) : 0);
+        const total = el('div', 'calc-total-cell', fmtNum(sum, Math.abs(sum) < 10 ? 2 : 1));
+        total.title = 'Итог: предмет' + (gS ? ' + грань' : '');
+        if (ownS) {
+          list.appendChild(pairRow(entry, ownS, false, total, ownS.label || ownS.key));
+          if (gS) list.appendChild(pairRow(gEntry, gS, true, null, '↳ грань'));
+        } else {
+          // стат есть только у грани — одна строка с итогом
+          list.appendChild(pairRow(gEntry, gS, true, total, '↳ ' + (gS.label || gS.key)));
+        }
+      }
+      box.appendChild(list);
+      box.appendChild(el('div', 'calc-note',
+        'Итог — сумма строк предмета и грани. У грани своя прокрутка (по умолчанию — середина) и свой «фикс» +' + R.ROLL.fixedPct +
+        '%; ковка, «улучшено» и перековка к ней не применяются.'));
     }
-    box.appendChild(list);
 
     // общие переключатели предмета: ковка, «улучшено», перековка
     const tools = el('div', 'calc-tools');
@@ -572,28 +601,66 @@
     refWrap.appendChild(el('span', 'calc-hero-label', String(entry.refine || 0)));
     tools.appendChild(refWrap);
     box.appendChild(tools);
-
-    // Наложенная грань у предка (item.fromStone): её статы идут ВДОБАВОК к статам
-    // предмета и настраиваются своими ползунками; у грани свой «фикс» +30 %,
-    // а ковка/«улучшено»/перековка к ней не применяются (как в карточке предмета).
-    const stone = item.fromStone && ITEMS[item.fromStone];
-    if (stone) {
-      box.appendChild(el('div', 'calc-sub', 'Грань (наложена, статы идут вдобавок): ' + stone.name));
-      const gEntry = stoneState(entry);
-      const glist = el('div', 'calc-stats-list');
-      for (const s of stone.stats || []) glist.appendChild(statRow(gEntry, stone, s, true));
-      box.appendChild(glist);
-      box.appendChild(el('div', 'calc-note',
-        'У грани своя прокрутка (по умолчанию — середина) и свой «фикс» +' + R.ROLL.fixedPct +
-        '%; ковка, «улучшено» и перековка к ней не применяются.'));
-    }
   }
 
-  function statRow(entry, item, s, stone) {
-    const row = el('div', 'calc-stat-row' + (stone ? ' is-stone' : ''));
+  // Строка стата для предка: колонки — имя · значение · ползунок · разброс · тоглы · итог.
+  // Итог (сумма предмета и грани) стоит только на первой строке каждого стата, у второй
+  // (грани) — пустая ячейка, чтобы колонки не съезжали.
+  function pairRow(entry, s, isStone, totalNode, nameText) {
+    const row = el('div', 'calc-stat-row' + (isStone ? ' is-stone-sub' : ''));
     const rollable = R.rollPct(s.key) != null;
-    // у грани прокрутка всегда стартует с середины (50) и «улучшено» к ней не применяется
-    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : (stone ? 50 : R.defaultRoll(s, entry));
+    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : (isStone ? 50 : R.defaultRoll(s, entry));
+    const value = R.rollValue(s, pos, entry);
+    const name = el('div', 'calc-stat-name' + (isStone ? ' is-sub' : ''), nameText);
+    name.title = s.key;
+    row.appendChild(name);
+    const val = el('div', 'calc-stat-val', fmtNum(value, Math.abs(value) < 10 ? 2 : 1));
+    val.style.color = rollable ? R.statColorAt(s, pos, entry.refine) : '';
+    row.appendChild(val);
+    if (rollable) {
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.min = '0';
+      range.max = '100';
+      range.value = String(pos);
+      range.className = 'calc-range';
+      range.oninput = () => { entry.roll[s.key] = Number(range.value); save(); renderItem(); refreshTotals(); };
+      row.appendChild(range);
+      const bounds = R.statBounds(s, entry);
+      row.appendChild(el('div', 'calc-stat-bounds', `${fmtNum(bounds.min, 1)} – ${fmtNum(bounds.max, 1)}`));
+    } else {
+      row.appendChild(el('div'));
+      row.appendChild(el('div'));
+    }
+    const toggles = el('div', 'calc-stat-toggles');
+    if (rollable && R.canFix(s.key)) {
+      const fix = el('button', 'roll-toggle' + (entry.fix.has(s.key) ? ' is-on' : ''), 'фикс');
+      fix.type = 'button';
+      fix.title = `Зафиксировать: +${R.ROLL.fixedPct}%`;
+      fix.onclick = () => {
+        if (entry.fix.has(s.key)) entry.fix.delete(s.key); else entry.fix.add(s.key);
+        save(); renderItem(); refreshTotals();
+      };
+      toggles.appendChild(fix);
+      if (!isStone) {
+        const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
+        enh.type = 'button';
+        enh.onclick = () => {
+          if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
+          save(); renderItem(); refreshTotals();
+        };
+        toggles.appendChild(enh);
+      }
+    }
+    row.appendChild(toggles);
+    row.appendChild(totalNode || el('div'));
+    return row;
+  }
+
+  function statRow(entry, item, s) {
+    const row = el('div', 'calc-stat-row');
+    const rollable = R.rollPct(s.key) != null;
+    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : R.defaultRoll(s, entry);
     const value = R.rollValue(s, pos, entry);
     const name = el('div', 'calc-stat-name', (s.label || s.key) + (rollable ? '' : ' (не прокручивается)'));
     name.title = s.key;
@@ -623,15 +690,13 @@
           save(); renderItem(); refreshTotals();
         };
         toggles.appendChild(fix);
-        if (!stone) {
-          const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
-          enh.type = 'button';
-          enh.onclick = () => {
-            if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
-            save(); renderItem(); refreshTotals();
-          };
-          toggles.appendChild(enh);
-        }
+        const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
+        enh.type = 'button';
+        enh.onclick = () => {
+          if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
+          save(); renderItem(); refreshTotals();
+        };
+        toggles.appendChild(enh);
       }
       row.appendChild(toggles);
     }
