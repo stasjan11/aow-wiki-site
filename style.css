@@ -1882,13 +1882,24 @@ h2.sec {
   align-items: center; gap: 8px; padding: 3px 0;
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
-/* у предка пары «предмет · грань» и колонка «Итог» (сумма) */
-.calc-stats-list.is-pair .calc-stat-row {
-  grid-template-columns: minmax(120px, 1.2fr) 60px minmax(56px, 1fr) 84px 126px 62px;
+/* у предка таблица как в карточке: свойство · разброс · прокрутка · предмет · грань · итог */
+.calc-stats-list.is-pair .calc-stat-row,
+.calc-pair-head {
+  display: grid;
+  grid-template-columns: 100px minmax(104px, 1.1fr) 74px minmax(54px, 1fr) 52px 48px 56px;
+  gap: 8px; align-items: center;
 }
-.calc-stats-list.is-pair .calc-stat-name.is-sub { padding-left: 16px; color: var(--fg-3); }
+.calc-pair-head {
+  padding: 3px 0; border-bottom: 1px solid var(--line);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-3);
+}
+.calc-pair-head .calc-pair-cell:nth-child(n+5) { text-align: right; }
 .calc-stats-list.is-pair .calc-stat-row.is-stone-sub { border-bottom-style: dashed; }
+.calc-cell-num { text-align: right; font-weight: 600; font-size: 13px; }
+.calc-cell-num.calc-zero { color: var(--fg-3); font-weight: 400; }
+.calc-cell-stone { color: var(--fg-2); }
 .calc-total-cell { font-weight: 600; text-align: right; font-size: 13px; color: var(--accent); }
+.calc-group-note { padding: 7px 0 2px; font-size: 12px; color: var(--fg-3); }
 .calc-stat-name { color: var(--fg-2); font-size: 13px; }
 .calc-stat-val { font-weight: 600; text-align: right; font-size: 13px; }
 .calc-stat-bounds { color: var(--fg-3); font-size: 12px; text-align: right; }

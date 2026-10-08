@@ -528,11 +528,12 @@
       return;
     }
 
-    // У предка статы показываются парой с гранью и итогом (как в карточке предмета):
-    // строки «предмет» и «↳ грань» друг под другом, справа у первой строки — сумма.
+    // Предок: таблица как в карточке предмета — «Свойство · Разброс · Прокрутка ·
+    // Предмет · Грань · Итог», ниже отдельная группа «Свойства грани» с её
+    // ползунками и «фиксом» (грань и предмет настраиваются независимо).
     const stone = item.fromStone && ITEMS[item.fromStone];
-    const list = el('div', 'calc-stats-list' + (stone ? ' is-pair' : ''));
     if (!stone) {
+      const list = el('div', 'calc-stats-list');
       for (const s of item.stats) list.appendChild(statRow(entry, item, s));
       box.appendChild(list);
     } else {
@@ -540,26 +541,30 @@
       const byKey = (arr, k) => (arr || []).find((s) => s.key === k);
       const valueOf = (e, s, isStone) => R.rollValue(s,
         e.roll[s.key] != null ? e.roll[s.key] : (isStone ? 50 : R.defaultRoll(s, e)), e);
-      const keys = [];
-      for (const s of item.stats || []) keys.push(s.key);
-      for (const s of stone.stats || []) if (!keys.includes(s.key)) keys.push(s.key);
-      for (const k of keys) {
-        const ownS = byKey(item.stats, k);
-        const gS = byKey(stone.stats, k);
-        const sum = (ownS ? valueOf(entry, ownS, false) : 0) + (gS ? valueOf(gEntry, gS, true) : 0);
-        const total = el('div', 'calc-total-cell', fmtNum(sum, Math.abs(sum) < 10 ? 2 : 1));
-        total.title = 'Итог: предмет' + (gS ? ' + грань' : '');
-        if (ownS) {
-          list.appendChild(pairRow(entry, ownS, false, total, ownS.label || ownS.key));
-          if (gS) list.appendChild(pairRow(gEntry, gS, true, null, '↳ грань'));
-        } else {
-          // стат есть только у грани — одна строка с итогом
-          list.appendChild(pairRow(gEntry, gS, true, total, '↳ ' + (gS.label || gS.key)));
-        }
+      const head = el('div', 'calc-pair-head');
+      for (const t of ['', 'Свойство', 'Разброс', 'Прокрутка', 'Предмет', 'Грань', 'Итог']) {
+        head.appendChild(el('div', 'calc-pair-cell', t));
+      }
+      const list = el('div', 'calc-stats-list is-pair');
+      list.appendChild(head);
+      for (const s of item.stats || []) {
+        const g = byKey(stone.stats, s.key);
+        const own = valueOf(entry, s, false);
+        const gv = g ? valueOf(gEntry, g, true) : null;
+        list.appendChild(pairRow(entry, s, {
+          gValue: gv,
+          total: own + (gv || 0),
+          totalTitle: 'Итог: предмет' + (g ? ' + грань' : ''),
+        }));
       }
       box.appendChild(list);
+      const glist = el('div', 'calc-stats-list is-pair');
+      glist.appendChild(el('div', 'calc-group-note', 'Свойства грани (прибавляются)'));
+      for (const g of stone.stats || []) glist.appendChild(pairRow(gEntry, g, { isStone: true }));
+      box.appendChild(glist);
       box.appendChild(el('div', 'calc-note',
-        'Итог — сумма строк предмета и грани. У грани своя прокрутка (по умолчанию — середина) и свой «фикс» +' + R.ROLL.fixedPct +
+        'Колонка «Итог» — сумма «предмет + грань», как в карточке предмета. У грани своя прокрутка ' +
+        '(по умолчанию — середина) и свой «фикс» +' + R.ROLL.fixedPct +
         '%; ковка, «улучшено» и перековка к ней не применяются.'));
     }
 
@@ -603,35 +608,17 @@
     box.appendChild(tools);
   }
 
-  // Строка стата для предка: колонки — имя · значение · ползунок · разброс · тоглы · итог.
-  // Итог (сумма предмета и грани) стоит только на первой строке каждого стата, у второй
-  // (грани) — пустая ячейка, чтобы колонки не съезжали.
-  function pairRow(entry, s, isStone, totalNode, nameText) {
-    const row = el('div', 'calc-stat-row' + (isStone ? ' is-stone-sub' : ''));
+  // Строка таблицы предка (и группы грани): тоглы · свойство · разброс · прокрутка ·
+  // предмет · грань · итог — как в карточке предмета. У строки грани (isStone)
+  // колонка «предмет» — прочерк, «итог» пустой (он уже посчитан в строке предмета).
+  function pairRow(entry, s, opts) {
+    const o = opts || {};
+    const row = el('div', 'calc-stat-row' + (o.isStone ? ' is-stone-sub' : ''));
     const rollable = R.rollPct(s.key) != null;
-    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : (isStone ? 50 : R.defaultRoll(s, entry));
+    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : (o.isStone ? 50 : R.defaultRoll(s, entry));
     const value = R.rollValue(s, pos, entry);
-    const name = el('div', 'calc-stat-name' + (isStone ? ' is-sub' : ''), nameText);
-    name.title = s.key;
-    row.appendChild(name);
-    const val = el('div', 'calc-stat-val', fmtNum(value, Math.abs(value) < 10 ? 2 : 1));
-    val.style.color = rollable ? R.statColorAt(s, pos, entry.refine) : '';
-    row.appendChild(val);
-    if (rollable) {
-      const range = document.createElement('input');
-      range.type = 'range';
-      range.min = '0';
-      range.max = '100';
-      range.value = String(pos);
-      range.className = 'calc-range';
-      range.oninput = () => { entry.roll[s.key] = Number(range.value); save(); renderItem(); refreshTotals(); };
-      row.appendChild(range);
-      const bounds = R.statBounds(s, entry);
-      row.appendChild(el('div', 'calc-stat-bounds', `${fmtNum(bounds.min, 1)} – ${fmtNum(bounds.max, 1)}`));
-    } else {
-      row.appendChild(el('div'));
-      row.appendChild(el('div'));
-    }
+    const fmtVal = (v) => fmtNum(v, Math.abs(v) < 10 ? 2 : 1);
+    // тоглы: у грани только «фикс» (ковка и «улучшено» к ней не применяются)
     const toggles = el('div', 'calc-stat-toggles');
     if (rollable && R.canFix(s.key)) {
       const fix = el('button', 'roll-toggle' + (entry.fix.has(s.key) ? ' is-on' : ''), 'фикс');
@@ -642,9 +629,10 @@
         save(); renderItem(); refreshTotals();
       };
       toggles.appendChild(fix);
-      if (!isStone) {
-        const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
+      if (!o.isStone) {
+        const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'усил');
         enh.type = 'button';
+        enh.title = `Улучшено: +${entry.enhancePct}% к отмеченным статам`;
         enh.onclick = () => {
           if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
           save(); renderItem(); refreshTotals();
@@ -653,7 +641,34 @@
       }
     }
     row.appendChild(toggles);
-    row.appendChild(totalNode || el('div'));
+    const name = el('div', 'calc-stat-name', s.label || s.key);
+    name.title = s.key + (o.isStone ? ' · свойство грани' : '');
+    row.appendChild(name);
+    if (rollable) {
+      const bounds = R.statBounds(s, entry);
+      row.appendChild(el('div', 'calc-stat-bounds', `${fmtNum(bounds.min, 1)} – ${fmtNum(bounds.max, 1)}`));
+      const range = document.createElement('input');
+      range.type = 'range';
+      range.min = '0';
+      range.max = '100';
+      range.value = String(pos);
+      range.className = 'calc-range';
+      range.oninput = () => { entry.roll[s.key] = Number(range.value); save(); renderItem(); refreshTotals(); };
+      row.appendChild(range);
+    } else {
+      row.appendChild(el('div'));
+      row.appendChild(el('div'));
+    }
+    row.appendChild(el('div', 'calc-cell-num' + (o.isStone ? ' calc-zero' : ''), o.isStone ? '—' : fmtVal(value)));
+    row.appendChild(el('div', 'calc-cell-num' + (o.gValue != null || o.isStone ? ' calc-cell-stone' : ' calc-zero'),
+      o.isStone ? fmtVal(value) : (o.gValue != null ? fmtVal(o.gValue) : '—')));
+    if (o.isStone || o.total == null) {
+      row.appendChild(el('div'));
+    } else {
+      const total = el('div', 'calc-total-cell', fmtVal(o.total));
+      total.title = o.totalTitle || 'Итог';
+      row.appendChild(total);
+    }
     return row;
   }
 
