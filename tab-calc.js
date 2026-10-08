@@ -149,12 +149,12 @@
       stoneRoll: e.stoneRoll, stoneFix: [...e.stoneFix],
     };
   }
-  const save = () => store.set('calc', {
+  const save = () => { invalidatePools(); store.set('calc', {
     hero: state.hero, base: state.base, attrMode: state.attrMode,
     slots: state.slots.map(dehydrate), neutral: dehydrate(state.neutral), pet: dehydrate(state.pet),
     bag: dehydrate(state.bag), soul: dehydrate(state.soul),
     runes: state.runes.map((r) => (r ? { id: r.id } : null)),
-  });
+  }); };
 
   // Сумка/рюкзак — по названию («Сумка…», «Рюкзак…», «Мешок …»). Стат
   // extra_backpack_slot_limit признаком не является: его дают и обычные предметы
@@ -175,6 +175,21 @@
     });
   }
 
+  // Значение одного стата при текущем состоянии прокрутки. У свойств эффекта
+  // (ability_*) позиция — это ИНДЕКС кнопки-положения (их всего 5), а не 0–100:
+  // как в карточке, где такие статы ролятся кнопками (stepRolls).
+  function statValue(entry, s) {
+    if (R.rollPct(s.key) == null) return s.value;
+    if (R.isEffectStat(s.key)) {
+      const steps = R.stepRolls(s, entry);
+      const i = entry.roll[s.key] != null ? Math.round(entry.roll[s.key]) : R.defaultRoll(s, entry);
+      const k = Math.min(steps.length - 1, Math.max(0, i));
+      return steps[k] ? steps[k].value : s.value;
+    }
+    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : R.defaultRoll(s, entry);
+    return R.rollValue(s, pos, entry);
+  }
+
   // Статы одного предмета с учётом прокрутки: { ключ: значение }.
   // У предка сверху добавляются статы его грани (item.fromStone).
   function statsOf(entry) {
@@ -182,8 +197,7 @@
     if (!item) return {};
     const out = {};
     for (const s of item.stats || []) {
-      const pos = entry.roll[s.key] != null ? entry.roll[s.key] : R.defaultRoll(s, entry);
-      out[s.key] = (out[s.key] || 0) + R.rollValue(s, pos, entry);
+      out[s.key] = (out[s.key] || 0) + statValue(entry, s);
     }
     const stone = item.fromStone && ITEMS[item.fromStone];
     if (stone) {
@@ -198,15 +212,52 @@
 
   const equipped = () => [...state.slots, state.neutral, state.pet, state.bag, state.soul].filter(Boolean);
 
-  // Сумма по всем слотам (руны не в счёт — у них нет статов панели)
-  function poolSum(key) {
-    let sum = 0;
-    for (const e of equipped()) sum += statsOf(e)[key] || 0;
-    return sum;
+  // Пул статов сборки: суммы предметов + эффекты предметов (itemeffects.js:
+  // конверсии и гранты от статов — призма, корона, сапоги мудреца и т. п.).
+  // Эффекты считаются с фикс-точкой и видят «панель без предметов» (state.base)
+  // для производных (мана, атрибуты), но сами применяются к пулу предметов:
+  // вписанная руками база не конвертируется. Кэш сбрасывается при каждом вводе.
+  let poolsCache = null;
+  const invalidatePools = () => { poolsCache = null; };
+
+  // Производные итоги для эффектов: атрибуты и мана «как в панели» (с учётом
+  // «% к атрибутам» из пула — у корона-эффекта и кристалла от них всё зависит)
+  const derivePools = (P) => {
+    const num = (k) => Number(state.base[k]) || 0;
+    const all = (P.bonus_all_stats || 0);
+    const mult = (kind) => 1 + ((P[ATTR_PCT_KEY[kind]] || 0) + (P.all_all_stats_pct || 0)) / 100;
+    const str = (num('bonus_strength') + num('bonus_all_stats') + (P.bonus_strength || 0) + all) * mult('str');
+    const agi = (num('bonus_agility') + num('bonus_all_stats') + (P.bonus_agility || 0) + all) * mult('agi');
+    const int = (num('bonus_intelligence') + num('bonus_all_stats') + (P.bonus_intelligence || 0) + all) * mult('int');
+    const mana = num('bonus_mana') + (P.bonus_mana || 0) + int * ATTR.manaPerInt;
+    return { str, agi, int, mana };
+  };
+
+  function pools() {
+    if (poolsCache) return poolsCache;
+    const sums = {};
+    for (const e of equipped()) {
+      const s = statsOf(e);
+      for (const k in s) sums[k] = (sums[k] || 0) + s[k];
+    }
+    let fx = { extra: {}, notes: [] };
+    if (window.AOWFX) fx = window.AOWFX.apply(equipped(), statsOf, derivePools);
+    for (const k in fx.extra) sums[k] = (sums[k] || 0) + fx.extra[k];
+    poolsCache = { sums, fx };
+    return poolsCache;
   }
 
+  // Сумма по всем слотам (руны не в счёт — у них нет статов панели)
+  const poolSum = (key) => pools().sums[key] || 0;
+
+  // Проценты атрибутов: «% к ловкости» и т. п. в игре умножают ИТОГ атрибута
+  // (вместе с вписанной базой) — all_strength_pct / all_agility_pct /
+  // all_intelligence_pct, плюс общий all_all_stats_pct (у корона-эффекта).
+  const ATTR_PCT_KEY = { str: 'all_strength_pct', agi: 'all_agility_pct', int: 'all_intelligence_pct' };
+  const attrPct = (kind) => poolSum(ATTR_PCT_KEY[kind]) + poolSum('all_all_stats_pct');
+
   // Атрибуты: «база» — то, что вписано руками (как в игре без предметов),
-  // «итого» — плюс атрибуты от предметов.
+  // «итого» — плюс атрибуты от предметов и умножение на «% к атрибуту».
   function attrSets() {
     const num = (k) => Number(state.base[k]) || 0;
     const allItems = poolSum('bonus_all_stats');
@@ -215,10 +266,15 @@
       agi: num('bonus_agility') + num('bonus_all_stats'),
       int: num('bonus_intelligence') + num('bonus_all_stats'),
     };
-    const total = {
+    const flat = {
       str: base.str + poolSum('bonus_strength') + allItems,
       agi: base.agi + poolSum('bonus_agility') + allItems,
       int: base.int + poolSum('bonus_intelligence') + allItems,
+    };
+    const total = {
+      str: flat.str * (1 + attrPct('str') / 100),
+      agi: flat.agi * (1 + attrPct('agi') / 100),
+      int: flat.int * (1 + attrPct('int') / 100),
     };
     return { base, total };
   }
@@ -235,17 +291,30 @@
     return state.attrMode === 'full' ? fn(total) : fn(total) - fn(base);
   };
 
+  const ATTR_ROW = { bonus_strength: 'str', bonus_agility: 'agi', bonus_intelligence: 'int' };
+
   const total = (key, attrsFn) => {
     const base = Number(state.base[key]) || 0;
     if (attrsFn && attrsFn.season) return { base, items: 0, fromAttrs: 0, sum: base, season: attrsFn.season };
     const items = poolSum(key);
     const fromAttrs = !attrsFn ? 0 : attrsFn === 'all-stats' ? poolSum('bonus_all_stats') : attrAdd(attrsFn);
+    // у атрибутных строк итог умножается на «% к атрибуту» из предметов: бонус
+    // показываем в колонке «Плюс сверху» (рядом с «Все атрибуты»)
+    const kind = ATTR_ROW[key];
+    if (kind) {
+      const pct = attrPct(kind);
+      if (pct) {
+        const bonus = (base + items + fromAttrs) * pct / 100;
+        return { base, items, fromAttrs: fromAttrs + bonus, sum: base + items + fromAttrs + bonus, pct };
+      }
+    }
     return { base, items, fromAttrs, sum: base + items + fromAttrs };
   };
 
   // ------------------------------------------------------------------ панель
 
   function renderStats() {
+    invalidatePools();
     const box = UI.$('calcStats');
     box.textContent = '';
     const head = el('div', 'calc-head');
@@ -379,6 +448,43 @@
       'Сила: +6 HP и +0.1 регена за пункт. Ловкость: +0.075 брони и скорость атаки по кривой «ЛОВ/(ЛОВ+500)×240». ' +
       'Интеллект: +0.85 маны, +0.02 регена и МР по кривой «ИНТ/(ИНТ+500)×50». ' +
       'Основной атрибут: +0.8 урона атаки за пункт (у универсала — 0.3 за каждый из трёх).'));
+
+    // Эффекты предметов: посчитанные (уже вошли в колонку «Предметы») и остальные
+    box.appendChild(effectsBlock());
+  }
+
+  // Блок «Эффекты предметов»: у посчитанных — что именно прибавлено (их вклад
+  // уже в колонке «Предметы»), у боевых — пометка, что в панель не входят.
+  function effectsBlock() {
+    const wrap = el('div', 'calc-fx');
+    wrap.appendChild(el('div', 'calc-sub', 'Эффекты предметов'));
+    const fx = pools().fx;
+    const counted = fx.notes.filter((n) => n.lines.length);
+    if (counted.length) {
+      for (const n of counted) {
+        const row = el('div', 'calc-fx-row');
+        row.appendChild(el('div', 'calc-fx-name', (ITEMS[n.itemId] ? ITEMS[n.itemId].name : n.itemId) + (n.conditional ? ' (условный)' : '')));
+        for (const l of n.lines) row.appendChild(el('div', 'calc-fx-line', l));
+        wrap.appendChild(row);
+      }
+    }
+    const unmodeled = equipped().filter((e) => {
+      const i = ITEMS[e.id];
+      return i && i.desc && (i.desc.action || i.desc.text) && !(window.AOWFX && window.AOWFX.effectOf(i));
+    });
+    if (unmodeled.length) {
+      const row = el('div', 'calc-fx-row calc-fx-muted');
+      row.appendChild(el('div', 'calc-fx-name', 'Не влияют на панель (боевые эффекты и прок-и)'));
+      for (const e of unmodeled) {
+        const i = ITEMS[e.id];
+        row.appendChild(el('div', 'calc-fx-line', `${i.name} — ${(i.desc.action || '').replace(/:\s*$/, '')}`));
+      }
+      wrap.appendChild(row);
+    }
+    if (!wrap.children.length || (counted.length === 0 && !unmodeled.length)) {
+      wrap.appendChild(el('div', 'calc-hint', 'У надетых предметов нет эффектов, влияющих на панель.'));
+    }
+    return wrap;
   }
 
   // Ячейки «Предметы / От атрибутов / Итого» держим по ссылкам — при вводе в
@@ -387,6 +493,7 @@
   let rowCells = null;
 
   function refreshTotals() {
+    invalidatePools();
     if (!rowCells) return;
     for (const [group, list] of GROUPS) {
       for (const [key, label, dec, attrsFn] of list) {
@@ -603,6 +710,7 @@
   // ------------------------------------------------------------------ старт
 
   function renderAll() {
+    invalidatePools();
     renderStats();
     renderInv();
     renderItem();
