@@ -449,14 +449,21 @@
       'Интеллект: +0.85 маны, +0.02 регена и МР по кривой «ИНТ/(ИНТ+500)×50». ' +
       'Основной атрибут: +0.8 урона атаки за пункт (у универсала — 0.3 за каждый из трёх).'));
 
-    // Эффекты предметов: посчитанные (уже вошли в колонку «Предметы») и остальные
-    box.appendChild(effectsBlock());
+    // Эффекты предметов: посчитанные (уже вошли в колонку «Предметы») и остальные.
+    // Блок держим отдельной ссылкой — при движении ползунков его текст обновляется
+    // без пересборки всей панели (renderFxBlock).
+    fxBox = el('div', 'calc-fx');
+    fillEffects(fxBox);
+    box.appendChild(fxBox);
   }
+
+  let fxBox = null;
+  const renderFxBlock = () => { if (fxBox) fillEffects(fxBox); };
 
   // Блок «Эффекты предметов»: у посчитанных — что именно прибавлено (их вклад
   // уже в колонке «Предметы»), у боевых — пометка, что в панель не входят.
-  function effectsBlock() {
-    const wrap = el('div', 'calc-fx');
+  function fillEffects(wrap) {
+    wrap.textContent = '';
     wrap.appendChild(el('div', 'calc-sub', 'Эффекты предметов'));
     const fx = pools().fx;
     const counted = fx.notes.filter((n) => n.lines.length);
@@ -481,10 +488,9 @@
       }
       wrap.appendChild(row);
     }
-    if (!wrap.children.length || (counted.length === 0 && !unmodeled.length)) {
+    if (counted.length === 0 && !unmodeled.length) {
       wrap.appendChild(el('div', 'calc-hint', 'У надетых предметов нет эффектов, влияющих на панель.'));
     }
-    return wrap;
   }
 
   // Ячейки «Предметы / От атрибутов / Итого» держим по ссылкам — при вводе в
@@ -636,7 +642,7 @@
     // onChange — лёгкий пересчёт (сохранение + панель), render — полная перерисовка.
     window.AOWSTATS.render(box, item, entry, {
       render: () => { save(); renderItem(); refreshTotals(); },
-      onChange: () => { save(); refreshTotals(); },
+      onChange: () => { save(); refreshTotals(); renderFxBlock(); },
     });
   }
 

@@ -22,17 +22,14 @@
   const STONES = window.AOW.stones || {};
 
   const num = (v, d) => (v == null || isNaN(Number(v)) ? d : Number(v));
-  const stat = (item, key) => {
-    const s = (item && item.stats || []).find((x) => x.key === key);
-    return s ? s.value : null;
-  };
   const r1 = (v) => (Math.round(v * 10) / 10);
   const add = (P, key, delta) => { P[key] = (P[key] || 0) + delta; };
 
   // ---------------------------------------------------------------- реестр
-  // apply(P, D, item, out, st): P — пул статов (мутируется), D — производные
-  // (атрибуты и мана), item — предмет (из него параметры ability_*), out — строки
-  // отчёта, st — состояние между проходами фикс-точки.
+  // apply(P, D, item, out): P — пул статов (мутируется), D — производные (атрибуты
+  // и мана), out — строки отчёта. Параметры эффектов (ability_*-ключи) читаются ИЗ ПУЛА:
+  // это значения по текущему положению кнопок-положений в редакторе — выберешь другой
+  // ролл параметра (как у короны «+32%» → «+43%»), эффект посчитается по нему.
 
   const REG = {
     // Призма трансмутации: ЦЕЛИКОМ переносит физ. урон в магический с надбавкой.
@@ -43,7 +40,7 @@
       apply(P, D, item, out) {
         const c = Math.max(0, P.physical_damage_add_pct || 0);
         if (!c) return;
-        const pct = num(stat(item, 'ability_value_convert_pct'), 120);
+        const pct = num(P.ability_value_convert_pct, 120);
         add(P, 'physical_damage_add_pct', -c);
         add(P, 'magical_damage_add_pct', c * pct / 100);
         out.push(`весь физ. урон посоха (${r1(c)}%) переведён в магический: −${r1(c)}% физ, +${r1(c * pct / 100)}% маг (×${r1(pct / 100)})`);
@@ -56,8 +53,8 @@
     item_0608: {
       title: 'Корона паранойи',
       apply(P, D, item, out) {
-        const boost = num(stat(item, 'ability_value_boost_pct'), 32);
-        const reduce = num(stat(item, 'ability_value_c_reduce_pct'), 15);
+        const boost = num(P.ability_value_boost_pct, 32);
+        const reduce = num(P.ability_value_c_reduce_pct, 15);
         const rows = [
           ['bonus_strength', 'str', 'all_strength_pct', 'сила'],
           ['bonus_agility', 'agi', 'all_agility_pct', 'ловкость'],
@@ -85,10 +82,10 @@
     item_0336: {
       title: 'Сапоги мудреца',
       apply(P, D, item, out) {
-        const threshold = num(stat(item, 'ability_mana_threshold'), 250);
-        const per = Math.max(1, num(stat(item, 'ability_value_c_mana_per_magic_damage_pct'), 15));
-        const step = num(stat(item, 'ability_bonus_magic_damage_pct_per_step'), 1);
-        const cap = num(stat(item, 'ability_value_bonus_magic_damage_pct_max'), 40);
+        const threshold = num(P.ability_mana_threshold, 250);
+        const per = Math.max(1, num(P.ability_value_c_mana_per_magic_damage_pct, 15));
+        const step = num(P.ability_bonus_magic_damage_pct_per_step, 1);
+        const cap = num(P.ability_value_bonus_magic_damage_pct_max, 40);
         const extra = Math.max(0, (D.mana || 0) - threshold);
         const pct = Math.min(cap, Math.floor(extra / per) * step);
         if (pct > 0) {
@@ -116,9 +113,9 @@
     item_0208: {
       title: 'Нулификатор',
       apply(P, D, item, out) {
-        const step = Math.max(1, num(stat(item, 'ability_lifesteal_step_pct'), 1));
-        const per = num(stat(item, 'ability_value_damage_bonus_per_step_pct'), 1);
-        const cap = num(stat(item, 'ability_value_damage_bonus_max_pct'), 30);
+        const step = Math.max(1, num(P.ability_lifesteal_step_pct, 1));
+        const per = num(P.ability_value_damage_bonus_per_step_pct, 1);
+        const cap = num(P.ability_value_damage_bonus_max_pct, 30);
         const ls = (P.magical_lifesteal_pct || 0) + (P.omni_lifesteal_pct || 0);
         const pct = Math.min(cap, Math.floor(ls / step) * per);
         if (pct > 0) {
@@ -134,9 +131,9 @@
     item_0658: {
       title: 'Кристалл первоосновы',
       apply(P, D, item, out) {
-        const stepAgi = Math.max(1, num(stat(item, 'ability_value_c_agility_per_step'), 300));
-        const perPct = num(stat(item, 'ability_value_crit_convert_pct_per_step'), 10);
-        const cap = num(stat(item, 'ability_value_crit_convert_cap_pct'), 100);
+        const stepAgi = Math.max(1, num(P.ability_value_c_agility_per_step, 300));
+        const perPct = num(P.ability_value_crit_convert_pct_per_step, 10);
+        const cap = num(P.ability_value_crit_convert_cap_pct, 100);
         const total = (P.physical_crit_chance_pct || 0) + (P.omni_crit_chance_pct || 0);
         const cp = Math.min(cap, Math.floor((D.agi || 0) / stepAgi) * perPct);
         if (!total || cp <= 0) return;
@@ -154,7 +151,7 @@
       title: 'Кодекс ростовщика',
       conditional: true,
       apply(P, D, item, out) {
-        const amp = num(stat(item, 'ability_value_magic_amp_pct'), 25);
+        const amp = num(P.ability_value_magic_amp_pct, 25);
         if (amp > 0) {
           add(P, 'magical_damage_add_pct', amp);
           out.push(`+${amp}% маг. урона, пока не исчерпан «долг» (он растёт за применения заклинаний)`);
