@@ -1,9 +1,12 @@
 // Вкладка «Калькулятор» (WIP).
 //
 // Считает статы сборки: база героя вписывается руками (то, что видно в игре без
-// предметов), сверху — предметы в 6 слотах, нейтральный слот, питомец и 3 руны.
-// Статы предметов прокручиваются тем же движком, что в карточке предмета
-// (itemroll.js), и всё сразу прибавляется к панели персонажа.
+// предметов), сверху — предметы в 6 слотах, нейтральный слот, питомец, сумка,
+// душа (в игре у неё отдельный слот, shared/life_soul.lua: LIFE_SOUL_SLOT = 9)
+// и 3 руны. Статы предметов прокручиваются тем же движком, что в карточке
+// предмета (itemroll.js), и всё сразу прибавляется к панели персонажа.
+// У предков (item.fromStone) статы наложенной грани идут ВДОБАВОК и настраиваются
+// отдельно: свой ползунок (по умолчанию 50) и свой «фикс» +30 %, без ковки.
 //
 // Что даёт каждый атрибут — из сборки: shared/const.lua (ATTR_PRIMARY_BONUS) и
 // modifiers/hero_base/modifier_cs_hero_primary_attributes.lua — сила даёт HP и
@@ -101,6 +104,7 @@
     neutral: null,
     pet: null,
     bag: null,
+    soul: null,                     // одна душа (item_H00xx) — в игре у неё отдельный слот
     runes: Array(3).fill(null),     // { id } — руны статов не дают, только способности
     sel: null,                      // что открыто в редакторе: {kind, i}
     pick: null,                     // что выбираем: {kind, i}
@@ -115,12 +119,14 @@
   state.neutral = hydrate(saved.neutral);
   state.pet = hydrate(saved.pet);
   state.bag = hydrate(saved.bag);
+  state.soul = hydrate(saved.soul);
   state.runes = Array.from({ length: 3 }, (_, i) => ((saved.runes || [])[i] ? { id: saved.runes[i].id } : null));
   state.sel = null;
   state.pick = null;
   if (state.attrMode !== 'full') state.attrMode = 'delta';
 
-  // state предмета хранит Set'ы — в localStorage они уходят массивами
+  // state предмета хранит Set'ы — в localStorage они уходят массивами;
+  // stoneRoll/stoneFix — прокрутка и «фикс» наложенной грани у предка (item.fromStone)
   function hydrate(e) {
     if (!e || !e.id) return null;
     return {
@@ -131,6 +137,8 @@
       divine: !!e.divine,
       enhancePct: e.enhancePct != null ? e.enhancePct : 29,
       refine: e.refine || 0,
+      stoneRoll: Object.assign({}, e.stoneRoll),
+      stoneFix: new Set(e.stoneFix || []),
     };
   }
   function dehydrate(e) {
@@ -138,11 +146,13 @@
     return {
       id: e.id, roll: e.roll, fix: [...e.fix], enhance: [...e.enhance],
       divine: e.divine, enhancePct: e.enhancePct, refine: e.refine,
+      stoneRoll: e.stoneRoll, stoneFix: [...e.stoneFix],
     };
   }
   const save = () => store.set('calc', {
     hero: state.hero, base: state.base, attrMode: state.attrMode,
-    slots: state.slots.map(dehydrate), neutral: dehydrate(state.neutral), pet: dehydrate(state.pet), bag: dehydrate(state.bag),
+    slots: state.slots.map(dehydrate), neutral: dehydrate(state.neutral), pet: dehydrate(state.pet),
+    bag: dehydrate(state.bag), soul: dehydrate(state.soul),
     runes: state.runes.map((r) => (r ? { id: r.id } : null)),
   });
 
@@ -155,7 +165,18 @@
 
   // ------------------------------------------------------------------ расчёты
 
-  // Статы одного предмета с учётом прокрутки: { ключ: значение }
+  // Наложенная грань предка: её статы прокручиваются своим ползунком (по умолчанию
+  // 50) со своим «фиксом» +30 %; ковка, «улучшено» и перековка к грани не применяются
+  // (как в карточке предмета во вкладке «Предметы»).
+  function stoneState(entry) {
+    return Object.assign({}, entry, {
+      roll: entry.stoneRoll, fix: entry.stoneFix,
+      enhance: new Set(), divine: false, refine: 0,
+    });
+  }
+
+  // Статы одного предмета с учётом прокрутки: { ключ: значение }.
+  // У предка сверху добавляются статы его грани (item.fromStone).
   function statsOf(entry) {
     const item = entry && ITEMS[entry.id];
     if (!item) return {};
@@ -164,10 +185,18 @@
       const pos = entry.roll[s.key] != null ? entry.roll[s.key] : R.defaultRoll(s, entry);
       out[s.key] = (out[s.key] || 0) + R.rollValue(s, pos, entry);
     }
+    const stone = item.fromStone && ITEMS[item.fromStone];
+    if (stone) {
+      const gs = stoneState(entry);
+      for (const s of stone.stats || []) {
+        const pos = entry.stoneRoll[s.key] != null ? entry.stoneRoll[s.key] : 50;
+        out[s.key] = (out[s.key] || 0) + R.rollValue(s, pos, gs);
+      }
+    }
     return out;
   }
 
-  const equipped = () => [...state.slots, state.neutral, state.pet, state.bag].filter(Boolean);
+  const equipped = () => [...state.slots, state.neutral, state.pet, state.bag, state.soul].filter(Boolean);
 
   // Сумма по всем слотам (руны не в счёт — у них нет статов панели)
   function poolSum(key) {
@@ -300,7 +329,7 @@
         const inp = document.createElement('input');
         inp.className = 'calc-input';
         inp.type = 'text';
-        inp.inputMode = 'numeric';
+        inp.inputMode = 'decimal'; // дробные вводятся свободно (запятая тоже принимается)
         inp.value = state.base[key] != null ? state.base[key] : '';
         inp.placeholder = '0';
         inp.title = season ? `От 0 до ${season}` : '';
@@ -308,7 +337,10 @@
           const v = inp.value.trim().replace(',', '.');
           if (v === '') delete state.base[key];
           else if (!isNaN(Number(v))) {
-            const n = Math.max(0, Math.min(season || 1e9, Math.round(Number(v))));
+            // уровни сезона — целые (это множители), остальные статы бывают дробными
+            const n = season
+              ? Math.max(0, Math.min(season, Math.round(Number(v))))
+              : Math.max(0, Number(v));
             state.base[key] = n;
             if (season && String(n) !== v) inp.value = String(n); // уровень — целое, с потолком
           } else return;
@@ -389,7 +421,7 @@
     box.textContent = '';
     const head = el('div', 'calc-head');
     head.appendChild(el('div', 'calc-title', 'Инвентарь'));
-    head.appendChild(el('span', 'calc-hero-note', 'как в игре: 6 слотов, нейтральный, питомец, сумка и 3 руны'));
+    head.appendChild(el('span', 'calc-hero-note', 'как в игре: 6 слотов, нейтральный, питомец, сумка, душа и 3 руны'));
     box.appendChild(head);
 
     const wrap = el('div', 'calc-inv');
@@ -401,6 +433,7 @@
     side.appendChild(slotNode(state.neutral, { kind: 'neutral' }, 'Нейтральный слот'));
     side.appendChild(slotNode(state.pet, { kind: 'pet' }, 'Питомец'));
     side.appendChild(slotNode(state.bag, { kind: 'bag' }, 'Сумка'));
+    side.appendChild(slotNode(state.soul, { kind: 'soul' }, 'Душа'));
     wrap.appendChild(side);
     box.appendChild(wrap);
 
@@ -412,12 +445,13 @@
     box.appendChild(runeBox);
   }
 
-  const kindKey = (k) => (k.kind === 'slot' ? state.slots[k.i] : k.kind === 'neutral' ? state.neutral : k.kind === 'pet' ? state.pet : k.kind === 'bag' ? state.bag : state.runes[k.i]);
+  const kindKey = (k) => (k.kind === 'slot' ? state.slots[k.i] : k.kind === 'neutral' ? state.neutral : k.kind === 'pet' ? state.pet : k.kind === 'bag' ? state.bag : k.kind === 'soul' ? state.soul : state.runes[k.i]);
   function setKind(k, value) {
     if (k.kind === 'slot') state.slots[k.i] = value;
     else if (k.kind === 'neutral') state.neutral = value;
     else if (k.kind === 'pet') state.pet = value;
     else if (k.kind === 'bag') state.bag = value;
+    else if (k.kind === 'soul') state.soul = value;
     else state.runes[k.i] = value;
   }
   const sameSel = (a, b) => !!a && !!b && a.kind === b.kind && a.i === b.i;
@@ -465,7 +499,7 @@
     const entry = key && kindKey(key);
     const item = entry && ITEMS[entry.id];
     if (!item) {
-      box.appendChild(el('div', 'calc-hint', 'Выбери предмет в слоте — здесь появятся его статы: прокрутка (сид), «фикс», «улучшено», божественная ковка и перековка — как в карточке предмета.'));
+      box.appendChild(el('div', 'calc-hint', 'Выбери предмет в слоте — здесь появятся его статы: прокрутка (сид), «фикс», «улучшено», божественная ковка и перековка — как в карточке предмета. У предка ниже появится ещё блок наложенной грани.'));
       return;
     }
     const head = el('div', 'calc-head');
@@ -473,6 +507,11 @@
     const title = el('div', 'calc-title', item.name);
     head.appendChild(title);
     box.appendChild(head);
+
+    if (key.kind === 'soul') {
+      box.appendChild(el('div', 'calc-hint', 'Душа занимает в игре отдельный слот. Активный эффект у всех душ общий (урон суммой атрибутов и лечение) — различаются они пассивкой и статами панели.'));
+      if (item.desc && item.desc.text) box.appendChild(el('div', 'calc-rune-desc', item.desc.text));
+    }
 
     if (key.kind === 'rune') {
       const gem = item.gem || {};
@@ -533,12 +572,28 @@
     refWrap.appendChild(el('span', 'calc-hero-label', String(entry.refine || 0)));
     tools.appendChild(refWrap);
     box.appendChild(tools);
+
+    // Наложенная грань у предка (item.fromStone): её статы идут ВДОБАВОК к статам
+    // предмета и настраиваются своими ползунками; у грани свой «фикс» +30 %,
+    // а ковка/«улучшено»/перековка к ней не применяются (как в карточке предмета).
+    const stone = item.fromStone && ITEMS[item.fromStone];
+    if (stone) {
+      box.appendChild(el('div', 'calc-sub', 'Грань (наложена, статы идут вдобавок): ' + stone.name));
+      const gEntry = stoneState(entry);
+      const glist = el('div', 'calc-stats-list');
+      for (const s of stone.stats || []) glist.appendChild(statRow(gEntry, stone, s, true));
+      box.appendChild(glist);
+      box.appendChild(el('div', 'calc-note',
+        'У грани своя прокрутка (по умолчанию — середина) и свой «фикс» +' + R.ROLL.fixedPct +
+        '%; ковка, «улучшено» и перековка к ней не применяются.'));
+    }
   }
 
-  function statRow(entry, item, s) {
-    const row = el('div', 'calc-stat-row');
+  function statRow(entry, item, s, stone) {
+    const row = el('div', 'calc-stat-row' + (stone ? ' is-stone' : ''));
     const rollable = R.rollPct(s.key) != null;
-    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : R.defaultRoll(s, entry);
+    // у грани прокрутка всегда стартует с середины (50) и «улучшено» к ней не применяется
+    const pos = entry.roll[s.key] != null ? entry.roll[s.key] : (stone ? 50 : R.defaultRoll(s, entry));
     const value = R.rollValue(s, pos, entry);
     const name = el('div', 'calc-stat-name', (s.label || s.key) + (rollable ? '' : ' (не прокручивается)'));
     name.title = s.key;
@@ -568,13 +623,15 @@
           save(); renderItem(); refreshTotals();
         };
         toggles.appendChild(fix);
-        const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
-        enh.type = 'button';
-        enh.onclick = () => {
-          if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
-          save(); renderItem(); refreshTotals();
-        };
-        toggles.appendChild(enh);
+        if (!stone) {
+          const enh = el('button', 'roll-toggle' + (entry.enhance.has(s.key) ? ' is-on' : ''), 'улучшено');
+          enh.type = 'button';
+          enh.onclick = () => {
+            if (entry.enhance.has(s.key)) entry.enhance.delete(s.key); else entry.enhance.add(s.key);
+            save(); renderItem(); refreshTotals();
+          };
+          toggles.appendChild(enh);
+        }
       }
       row.appendChild(toggles);
     }
@@ -587,8 +644,10 @@
     if (key.kind === 'rune') return (i) => i.type === 'gem' && i.gem && (!i.gem.profession || i.gem.profession === state.hero);
     if (key.kind === 'pet') return (i) => /^item_pet_/.test(i.id) && i.type === 'equip';
     if (key.kind === 'bag') return (i) => i.type === 'equip' && isBagItem(i);
+    // души (item_H00xx) занимают отдельный слот и в обычные слоты не лезут
+    if (key.kind === 'soul') return (i) => i.isSoul === true;
     if (key.kind === 'neutral') return (i) => i.type === 'equip' && i.neutral === true;
-    return (i) => i.inGame !== false && i.type === 'equip' && !/^item_pet_/.test(i.id) && !i.neutral && !isBagItem(i);
+    return (i) => i.inGame !== false && i.type === 'equip' && !i.isSoul && !/^item_pet_/.test(i.id) && !i.neutral && !isBagItem(i);
   }
 
   function renderPick() {
@@ -598,7 +657,7 @@
     box.hidden = false;
     box.textContent = '';
     const head = el('div', 'calc-head');
-    const titles = { slot: 'Выбор предмета', neutral: 'Нейтральный предмет', pet: 'Питомец', bag: 'Сумка (рюкзак)', rune: 'Руна для ' + state.hero };
+    const titles = { slot: 'Выбор предмета', neutral: 'Нейтральный предмет', pet: 'Питомец', bag: 'Сумка (рюкзак)', soul: 'Душа (отдельный слот)', rune: 'Руна для ' + state.hero };
     head.appendChild(el('div', 'calc-title', titles[key.kind] || 'Выбор'));
     const close = el('button', 'calc-reset', 'Закрыть');
     close.type = 'button';
