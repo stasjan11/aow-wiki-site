@@ -790,6 +790,11 @@ h2.sec {
 .stat-list .stat-row + .stat-row { border-top: 1px solid var(--line); }
 .stat-list .stat-row:hover { background: none; }
 
+/* «Навык души» в карточке: значения — текстом, поэтому колонка шире и с переносом */
+.soul-skill .stat-row { grid-template-columns: 150px 1fr; }
+.soul-skill .soul-val { color: var(--fg-2); text-align: left; white-space: normal; line-height: 1.45; }
+.soul-skill .soul-val .faq-link { color: var(--accent); }
+
 /* ------------------------------------------------------ строки-ссылки */
 
 .link-row {

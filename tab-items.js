@@ -473,6 +473,55 @@
         `статами, качеством и уровнем: ${soulRulesText()}.`));
     }
 
+    // --- навык души: превращение в босса (данные собирает build.js из boss_transform/*,
+    // ak_player_boss_abilities.lua и ak_life_souls.lua — см. soulSkills)
+    if (i.soulSkill) {
+      const s = i.soulSkill;
+      const AIM_RU = {
+        point: 'по точке' + (s.pointRange ? ` (радиус ${s.pointRange})` : ''),
+        direction: 'по направлению',
+        self: 'на себя',
+      };
+      const MONSTER_BY_ID = new Map(MONSTERS.map((m) => [m.id, m]));
+      const boss = MONSTER_BY_ID.get(s.bossUnit);
+      const bossName = boss ? boss.name : s.bossUnit;
+      const bossNode = el('span', 'faq-link');
+      bossNode.appendChild(el('span', 'faq-link-name', bossName));
+      bossNode.title = `Открыть «${bossName}» (${s.bossUnit})`;
+      bossNode.onclick = () => go('monsters', s.bossUnit);
+
+      box.appendChild(el('h2', 'sec', 'Навык души'));
+      const list = el('div', 'drops stat-list soul-skill');
+      const row = (label, value) => {
+        const r = el('div', 'drop stat-row');
+        r.appendChild(el('div', 'drop-name', label));
+        const v = el('div', 'soul-val');
+        if (typeof value === 'string') v.textContent = value;
+        else v.appendChild(value);
+        r.appendChild(v);
+        list.appendChild(r);
+      };
+      row('Превращение', bossNode);
+      if (s.window) row('Окно превращения', `${s.window} с — неуязвим, управление недоступно`);
+      if (s.segments) {
+        row('Сегментов урона', s.segments === 1 ? '1 (одним попаданием)' : `${s.segments} (каждый — отдельное попадание)`);
+      }
+      row('Наведение', AIM_RU[s.aim] || s.aim || '—');
+      if (s.cast) row('Длительность исполнения', `${s.cast} с`);
+      if (s.cooldownBase) {
+        const min = s.cooldownMin && s.cooldownMin !== s.cooldownBase
+          ? ` (на ${s.cooldownMaxUpgrade} ковках ≈ ${s.cooldownMin} с)` : '';
+        row('Кулдаун', `${s.cooldownBase} с${min}`);
+      }
+      box.appendChild(list);
+      box.appendChild(el('div', 'note',
+        `Навык души — превращение в босса: герой на ${s.window ? s.window + ' с' : 'время навыка'} становится ` +
+        `«${bossName}», всё это время он неуязвим, не получает дебаффы и не управляется — движением занимается сама игра. ` +
+        'Урон — чистый (обходит броню и маг. сопротивление, крит не срабатывает), поровну на сегменты; каждый враг получает ' +
+        'не больше одного сегмента за волну. Кулдаун сокращается только общим «Сокращением перезарядки, %» и падает на ' +
+        `${s.cooldownCdrPct} % за каждую ковку души. Работает только в правилах s2.`));
+    }
+
     // --- какой талант открывает крафт этого предмета
     renderTalentUnlock(box, i);
 
