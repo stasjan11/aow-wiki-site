@@ -197,6 +197,7 @@
     if (i.cost) tags.appendChild(el('span', 'tag tag-cost', '💰 ' + i.cost));
     if (i.useMax != null) tags.appendChild(el('span', 'tag tag-use', 'Применений: ' + i.useMax));
     if (i.timeCost) tags.appendChild(el('span', 'tag', 'Время: ' + i.timeCost));
+    if (i.ruleset) tags.appendChild(el('span', 'tag tag-ruleset', 'только ' + i.ruleset));
     if (i.chest) {
       tags.appendChild(el('span', 'tag', `Башня «${i.chest.tower}»`));
       if (i.chest.temporary) tags.appendChild(el('span', 'tag', 'незапечатанный'));
@@ -386,7 +387,10 @@
       box.appendChild(el('div', 'note mono', i.script + '.lua'));
     }
 
-    box.appendChild(el('div', 'footnote', `Правила: ${META.ruleset} · данные собраны ${META.built}`));
+    const rules = i.ruleset
+      ? `Правила: ${META.ruleset} · предмет доступен только в ${i.ruleset}`
+      : `Правила: ${META.ruleset}`;
+    box.appendChild(el('div', 'footnote', `${rules} · данные собраны ${META.built}`));
   }
 
   // ------------------------------------------------------------------- выбор

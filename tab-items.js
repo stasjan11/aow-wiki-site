@@ -444,6 +444,7 @@
     if (i.level != null) tags.appendChild(el('span', 'tag', 'Уровень ' + i.level));
     if (i.cost) tags.appendChild(el('span', 'tag tag-cost', '💰 ' + i.cost));
     if (i.isRecipe) tags.appendChild(el('span', 'tag', 'выпадает один раз'));
+    if (i.ruleset) tags.appendChild(el('span', 'tag tag-ruleset', 'только ' + i.ruleset));
     htxt.appendChild(tags);
     // цена на бирже: нужна вкладке «Крафт» (купить или скрафтить), но вписать
     // её удобно здесь, рядом с игровой ценой предмета
@@ -467,7 +468,7 @@
       const mult = soulMultiplier(i);
       box.appendChild(el('div', 'note',
         `Душа: ${mult != null ? `множитель ×${mult}, ` : ''}активный эффект у всех душ одинаков — ` +
-        'суммарный чистый урон, равный сумме атрибутов × множитель, плюс экстренное исцеление ' +
+        'чистый урон, равный сумме всех атрибутов × множитель, плюс экстренное исцеление ' +
         '(50 % недостающего здоровья и регенерация 6 сек.). Различаются души только пассивными ' +
         `статами, качеством и уровнем: ${soulRulesText()}.`));
     }
@@ -552,8 +553,8 @@
       if (bosses.length) parts.push(`награда боссов ${bosses.join(', ')} (волны ${wavesOf('boss')})`);
       if (merchants.length) parts.push(`у торговцев уровня ${merchants.join(', ')} (волны ${wavesOf('merchant')})`);
       if (parts.length) {
-        box.appendChild(el('h2', 'sec', 'Бесконечка Пещеры жадности'));
-        const line = el('div', 'note note-hard', 'Встречается в бесконечном режиме: ' + parts.join('; ') + '.');
+        box.appendChild(el('h2', 'sec', 'Бесконечка'));
+        const line = el('div', 'note note-hard', 'Встречается в Бесконечке: ' + parts.join('; ') + '.');
         line.title = 'Открыть «Небо» → «Бесконечка»';
         line.style.cursor = 'pointer';
         line.onclick = () => go('sky', 'endless');
@@ -565,7 +566,7 @@
       for (const d of i.cave) if (d.kind === 'reward') rewardByTier.set(d.tier, d.poolId);
       const rewardTiers = [...rewardByTier.keys()].sort((a, b) => a - b);
       if (rewardTiers.length) {
-        box.appendChild(el('h2', 'sec', 'Сундук-награда Пещеры жадности'));
+        box.appendChild(el('h2', 'sec', 'Сундук-награда Неба'));
         const label = rewardTiers.map((t) => `Небо ${t} (${rewardByTier.get(t)})`).join(', ');
         const line = el('div', 'note note-hard', `Падает из сундука-награды: ${label}.`);
         line.title = `Открыть «Небо» → «Небо ${rewardTiers[0]}»`;
@@ -592,7 +593,12 @@
       box.appendChild(el('div', 'note mono', i.script + '.lua'));
     }
 
-    box.appendChild(el('div', 'footnote', `Правила: ${META.ruleset} · данные собраны ${META.built}`));
+    // у части предметов есть AllowedRulesets: печати профессий и «Вино триумфа» —
+    // только s3, души/DLC башни/старшие ступени рун Доу — только s2
+    const rules = i.ruleset
+      ? `Правила: ${META.ruleset} · предмет доступен только в ${i.ruleset}`
+      : `Правила: ${META.ruleset}`;
+    box.appendChild(el('div', 'footnote', `${rules} · данные собраны ${META.built}`));
   }
 
   // ---------------------------------------------- строка характеристики
