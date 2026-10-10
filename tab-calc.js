@@ -1,10 +1,13 @@
 // Вкладка «Калькулятор» (WIP).
 //
-// Считает статы сборки: база героя вписывается руками (то, что видно в игре без
-// предметов), сверху — предметы в 6 слотах, нейтральный слот, питомец, сумка,
-// душа (в игре у неё отдельный слот, shared/life_soul.lua: LIFE_SOUL_SLOT = 9)
-// и 3 руны. Статы предметов прокручиваются тем же движком, что в карточке
-// предмета (itemroll.js), и всё сразу прибавляется к панели персонажа.
+// Считает статы сборки: база героя **считается сама** для выбранного героя на
+// 30 уровне (data/heroStats.js: база и рост из ak_heroes.txt, все ступени
+// профессии, узлы своей ветки и всех общих деревьев целиком), но её можно
+// править руками — ручное значение перекрывает расчётное. Сверху — предметы в
+// 6 слотах, нейтральный слот, питомец, сумка, душа (в игре у неё отдельный слот,
+// shared/life_soul.lua: LIFE_SOUL_SLOT = 9) и 3 руны. Статы предметов
+// прокручиваются тем же движком, что в карточке предмета (itemroll.js), и всё
+// сразу прибавляется к панели персонажа.
 // У предков (item.fromStone) статы наложенной грани идут ВДОБАВОК и настраиваются
 // отдельно: свой ползунок (по умолчанию 50) и свой «фикс» +30 %, без ковки.
 //
@@ -161,7 +164,51 @@
   // («Сапоги путешественника» +5, «Обломок брони» +2, «Наручи» +1).
   const isBagItem = (i) => /(сумка|сумки|рюкзак|мешок\s)/i.test(i.name || '');
 
-  const primary = () => HERO_PRIMARY[state.hero] || 'str';
+  const primary = () => (HERO() && HERO().primary) || HERO_PRIMARY[state.hero] || 'str';
+
+  // ------------------------------------------------ база героя из данных сборки
+
+  // window.AOW.heroStats (собирает build.js): база и рост атрибутов, ступени
+  // профессии, узлы деревьев и готовые статы на 30 уровне. Ручной ввод
+  // (state.base) — переопределение: пустое поле = значение из героя.
+  const HS = () => window.AOW && window.AOW.heroStats;
+  const HERO = () => { const hs = HS(); return (hs && hs.heroes[state.hero]) || null; };
+  const LVL = () => (HS() && HS().level) || 30;
+  const ATTR_KEY_OF = { bonus_strength: 'str', bonus_agility: 'agi', bonus_intelligence: 'int' };
+
+  // строки панели, которые считаются от атрибутов (у них в данных flat/mult)
+  const ATTRS_FN = {};
+  for (const [, rows] of GROUPS) for (const [k, , , fn] of rows) if (typeof fn === 'function') ATTRS_FN[k] = fn;
+
+  // Атрибуты базы (то, что видно в игре без предметов): ручное или из героя.
+  function baseAttrs() {
+    const all = baseVal('bonus_all_stats');
+    return {
+      str: baseVal('bonus_strength') + all,
+      agi: baseVal('bonus_agility') + all,
+      int: baseVal('bonus_intelligence') + all,
+    };
+  }
+
+  // Расчётное значение строки «База» из данных героя (null — данных нет).
+  function autoBase(key) {
+    const h = HERO();
+    if (!h) return null;
+    if (ATTR_KEY_OF[key]) return h.level30.attrs[ATTR_KEY_OF[key]];
+    const d = h.level30.derived[key];
+    if (d) return d.flat + d.mult * ATTRS_FN[key](baseAttrs());
+    const p = h.level30.plain[key];
+    return p != null ? p : null;
+  }
+
+  // Значение колонки «База»: ручное перекрывает расчётное.
+  function baseVal(key) {
+    const v = state.base[key];
+    if (v != null && v !== '') return Number(v) || 0;
+    const a = autoBase(key);
+    return a == null ? 0 : a;
+  }
+  const isOverridden = (key) => state.base[key] != null && state.base[key] !== '';
 
   // ------------------------------------------------------------------ расчёты
 
@@ -223,13 +270,13 @@
   // Производные итоги для эффектов: атрибуты и мана «как в панели» (с учётом
   // «% к атрибутам» из пула — у корона-эффекта и кристалла от них всё зависит)
   const derivePools = (P) => {
-    const num = (k) => Number(state.base[k]) || 0;
+    const base = baseAttrs();
     const all = (P.bonus_all_stats || 0);
     const mult = (kind) => 1 + ((P[ATTR_PCT_KEY[kind]] || 0) + (P.all_all_stats_pct || 0)) / 100;
-    const str = (num('bonus_strength') + num('bonus_all_stats') + (P.bonus_strength || 0) + all) * mult('str');
-    const agi = (num('bonus_agility') + num('bonus_all_stats') + (P.bonus_agility || 0) + all) * mult('agi');
-    const int = (num('bonus_intelligence') + num('bonus_all_stats') + (P.bonus_intelligence || 0) + all) * mult('int');
-    const mana = num('bonus_mana') + (P.bonus_mana || 0) + int * ATTR.manaPerInt;
+    const str = (base.str + (P.bonus_strength || 0) + all) * mult('str');
+    const agi = (base.agi + (P.bonus_agility || 0) + all) * mult('agi');
+    const int = (base.int + (P.bonus_intelligence || 0) + all) * mult('int');
+    const mana = baseVal('bonus_mana') + (P.bonus_mana || 0) + int * ATTR.manaPerInt;
     return { str, agi, int, mana };
   };
 
@@ -259,13 +306,8 @@
   // Атрибуты: «база» — то, что вписано руками (как в игре без предметов),
   // «итого» — плюс атрибуты от предметов и умножение на «% к атрибуту».
   function attrSets() {
-    const num = (k) => Number(state.base[k]) || 0;
     const allItems = poolSum('bonus_all_stats');
-    const base = {
-      str: num('bonus_strength') + num('bonus_all_stats'),
-      agi: num('bonus_agility') + num('bonus_all_stats'),
-      int: num('bonus_intelligence') + num('bonus_all_stats'),
-    };
+    const base = baseAttrs();
     const flat = {
       str: base.str + poolSum('bonus_strength') + allItems,
       agi: base.agi + poolSum('bonus_agility') + allItems,
@@ -294,9 +336,27 @@
   const ATTR_ROW = { bonus_strength: 'str', bonus_agility: 'agi', bonus_intelligence: 'int' };
 
   const total = (key, attrsFn) => {
-    const base = Number(state.base[key]) || 0;
-    if (attrsFn && attrsFn.season) return { base, items: 0, fromAttrs: 0, sum: base, season: attrsFn.season };
+    if (attrsFn && attrsFn.season) {
+      const base = Number(state.base[key]) || 0;
+      return { base, items: 0, fromAttrs: 0, sum: base, season: attrsFn.season };
+    }
     const items = poolSum(key);
+    const A = attrSets();
+    const der = HERO() && HERO().level30.derived[key];
+    if (der && ATTRS_FN[key]) {
+      // Производная строка: база = флат из сборки + атрибуты базы, «плюс сверху» —
+      // вклад предметов (режим «только от предметов») или вся атрибутная часть
+      // («считать целиком»). Обе моды дают одинаковое «Итого»: в игре панель без
+      // предметов включает и флат, и атрибуты.
+      const fn = ATTRS_FN[key];
+      const full = state.attrMode === 'full';
+      const base = isOverridden(key) ? (Number(state.base[key]) || 0)
+        : full ? der.flat
+          : der.flat + der.mult * fn(A.base);
+      const fromAttrs = full ? der.mult * fn(A.total) : der.mult * (fn(A.total) - fn(A.base));
+      return { base, items, fromAttrs, sum: base + items + fromAttrs };
+    }
+    const base = baseVal(key);
     const fromAttrs = !attrsFn ? 0 : attrsFn === 'all-stats' ? poolSum('bonus_all_stats') : attrAdd(attrsFn);
     // у атрибутных строк итог умножается на «% к атрибуту» из предметов: бонус
     // показываем в колонке «Плюс сверху» (рядом с «Все атрибуты»)
@@ -328,12 +388,24 @@
       if (h.id === state.hero) o.selected = true;
       heroSel.appendChild(o);
     }
-    heroSel.onchange = () => { state.hero = heroSel.value; save(); renderAll(); };
+    // Смена героя забывает ручные правки базы (сезонные уровни не трогаем —
+    // это состояние игрока, а не героя) и заново считает статы.
+    heroSel.onchange = () => {
+      state.hero = heroSel.value;
+      for (const k of Object.keys(state.base)) if (!k.startsWith('season_')) delete state.base[k];
+      save();
+      renderAll();
+    };
     const heroWrap = el('label', 'calc-hero-wrap');
     heroWrap.appendChild(el('span', 'calc-hero-label', 'Герой:'));
     heroWrap.appendChild(heroSel);
     const p = primary();
-    heroWrap.appendChild(el('span', 'calc-hero-note', p === 'uni' ? 'универсал' : `основной: ${p === 'str' ? 'сила' : p === 'agi' ? 'ловкость' : 'интеллект'}`));
+    const h = HERO();
+    const overCount = Object.keys(state.base).filter((k) => !k.startsWith('season_')).length;
+    heroWrap.appendChild(el('span', 'calc-hero-note',
+      (h ? `${LVL()} уровень · посчитано из сборки` : 'нет данных героя — впишите базу руками') +
+      (p === 'uni' ? ' · универсал' : ` · основной: ${p === 'str' ? 'сила' : p === 'agi' ? 'ловкость' : 'интеллект'}`) +
+      (overCount ? ` · правок вручную: ${overCount}` : '')));
     head.appendChild(heroWrap);
     // прибавки от атрибутов: от предметов (по разнице) или целиком
     const modes = el('div', 'calc-modes');
@@ -345,12 +417,21 @@
       modes.appendChild(b);
     };
     mkMode('delta', 'Статы от атрибутов: только от предметов',
-      'Впиши панель из игры без предметов — она уже включает прибавки твоих базовых атрибутов (HP от силы, броня от ловкости и т. д.). ' +
-      'В этом режиме калькулятор прибавит только то, что дали предметы. Чтобы не считать дважды, впиши и атрибуты тоже.');
+      'База считается из героя (30 уровень), панель без предметов уже включает и флат сборки, и прибавки атрибутов. ' +
+      'В этом режиме «Плюс сверху» показывает только вклад предметов — ровно то, что они добавили к панели.');
     mkMode('full', 'считать целиком',
-      'Считать прибавки атрибутов полностью. Подходит, если вписываешь только атрибуты, а HP, ману, броню, МС и урон оставляешь пустыми: ' +
-      'тогда калькулятор посчитает их от атрибутов сам.');
+      '«Плюс сверху» — вся атрибутная часть (сила×6 HP, ловкость×0.075 брони и т. д.), а в «Базе» остаётся только флат сборки: ' +
+      'видно, сколько дают сами атрибуты. «Итого» в обоих режимах одинаковое.');
     head.appendChild(modes);
+    const recalc = el('button', 'calc-reset', 'Пересчитать из героя');
+    recalc.type = 'button';
+    recalc.title = 'Забыть ручные правки колонки «База» и снова посчитать статы от героя на 30 уровне';
+    recalc.onclick = () => {
+      for (const k of Object.keys(state.base)) if (!k.startsWith('season_')) delete state.base[k];
+      save();
+      renderAll();
+    };
+    head.appendChild(recalc);
     const reset = el('button', 'calc-reset', 'Сбросить всё');
     reset.type = 'button';
     reset.title = 'Очистить базу, слоты и руны';
@@ -365,17 +446,17 @@
     head.appendChild(reset);
     box.appendChild(head);
     box.appendChild(el('div', 'calc-hint',
-      'Впиши статы из игры без предметов — и атрибуты, и то, что от них зависит (здоровье, броню, МС, урон от атаки): ' +
-      'панель уже включает прибавки твоих базовых атрибутов. Дальше предметы прибавляются сами, а вклад атрибутов считается разницей — ' +
-      'чтобы ничего не посчиталось дважды. Если хочешь, чтобы калькулятор считал HP, броню и остальное от атрибутов полностью — ' +
-      'оставь эти поля пустыми и переключи режим на «считать целиком». ' +
+      'База считается сама: для выбранного героя на 30 уровне, со всеми ступенями профессии и всеми узлами — ' +
+      'своей ветки и общих деревьев, взятыми целиком (что именно вошло — в блоке «Откуда база» под панелью). ' +
+      'Поле можно править руками — у такой строки появляется пометка, а кнопка «Пересчитать из героя» возвращает расчёт. ' +
+      'Дальше предметы прибавляются сами, а вклад атрибутов считается разницей — чтобы ничего не посчиталось дважды. ' +
       'Уровни сезона (вклад и мир) дают по +2 % урона и −2 % получаемого за уровень и работают в самом конце — ' +
       'после брони, независимыми множителями.'));
 
     const table = el('table', 'calc-table');
     const thead = el('thead');
     const hr = el('tr');
-    ['Стат', 'База (руками)', 'Предметы', 'Плюс сверху', 'Итого'].forEach((t, i) => {
+    ['Стат', `База (герой, ${LVL()} ур.)`, 'Предметы', 'Плюс сверху', 'Итого'].forEach((t, i) => {
       const th = el('th', i ? 'calc-num' : '', t);
       hr.appendChild(th);
     });
@@ -392,16 +473,20 @@
       for (const [key, label, dec, attrsFn] of rows) {
         const t = total(key, attrsFn);
         const season = t.season;
+        const over = isOverridden(key);
+        const auto = !over && !season && t.base ? fmtNum(t.base, dec) : '';
         const tr = el('tr');
         tr.appendChild(el('td', 'calc-name', label));
         const b = el('td', 'calc-num');
         const inp = document.createElement('input');
-        inp.className = 'calc-input';
+        inp.className = 'calc-input' + (over ? ' is-override' : auto ? ' is-hero' : '');
         inp.type = 'text';
         inp.inputMode = 'decimal'; // дробные вводятся свободно (запятая тоже принимается)
-        inp.value = state.base[key] != null ? state.base[key] : '';
+        inp.value = over ? state.base[key] : auto;
         inp.placeholder = '0';
-        inp.title = season ? `От 0 до ${season}` : '';
+        inp.title = season ? `От 0 до ${season}`
+          : over ? 'Правка вручную: очистите поле, чтобы вернуть значение из героя'
+            : auto ? `Из героя: ${HERO().name}, ${LVL()} уровень, без предметов` : '';
         inp.oninput = () => {
           const v = inp.value.trim().replace(',', '.');
           if (v === '') delete state.base[key];
@@ -459,6 +544,158 @@
 
   let fxBox = null;
   const renderFxBlock = () => { if (fxBox) fillEffects(fxBox); };
+
+  // ------------------------------------------- блок «Откуда база» (расшифровка)
+
+  // Подписи статов узлов для подсказок чипов (в данных ключи, не подписи)
+  const STAT_LABEL = {
+    base_strength: 'Сила', base_agility: 'Ловкость', base_intelligence: 'Интеллект',
+    base_all_stats: 'Все атрибуты', base_health: 'Здоровье', base_mana: 'Мана', base_armor: 'Броня',
+    base_attack_damage: 'Урон от атаки', base_movespeed: 'Скорость передвижения',
+    base_magic_resistance: 'Маг. сопротивление', health_regen: 'Регенерация здоровья',
+    mana_regen: 'Регенерация маны', attack_speed: 'Скорость атаки', warehouse: 'Вместимость склада',
+  };
+
+  // Строки производных статов в блоке: панель калькулятора -> поле в данных героя
+  // (kv — база сборки, tree — ключ статов узлов, оба сверены с build.js).
+  const HERO_ROWS = [
+    ['Здоровье', 'bonus_health', 0, 'health', 'base_health'],
+    ['Регенерация здоровья', 'health_regen', 1, 'healthRegen', 'health_regen'],
+    ['Мана', 'bonus_mana', 1, 'mana', 'base_mana'],
+    ['Регенерация маны', 'mana_regen', 2, 'manaRegen', 'mana_regen'],
+    ['Урон от атаки', 'bonus_attack_damage', 1, 'attackDamage', 'base_attack_damage'],
+    ['Скорость атаки', 'attack_speed', 1, 'attackSpeed', 'attack_speed'],
+    ['Броня', 'bonus_armor', 1, 'armor', 'base_armor'],
+    ['Маг. сопротивление', 'base_magic_resistance', 1, 'magicResistance', 'base_magic_resistance'],
+  ];
+  const ATTR_ROWS = [['Сила', 'str', 'base_strength'], ['Ловкость', 'agi', 'base_agility'], ['Интеллект', 'int', 'base_intelligence']];
+
+  function renderHeroBlock() {
+    const box = UI.$('calcHero');
+    if (!box) return;
+    box.textContent = '';
+    const h = HERO();
+    const head = el('div', 'calc-head');
+    head.appendChild(el('div', 'calc-title', 'Откуда база'));
+    box.appendChild(head);
+    if (!h) {
+      box.appendChild(el('div', 'calc-hint', 'В данных сборки этого героя нет — база не считается, вписывайте руками.'));
+      return;
+    }
+    const T = (k) => h.treeStats[k] || 0;
+    const L = LVL() - 1;
+    box.appendChild(el('div', 'calc-hint',
+      `${h.name}, ${LVL()} уровень, без предметов. База и рост — из сборки (${h.base.str}/${h.base.agi}/${h.base.int} и рост ` +
+      `${h.growth.str}/${h.growth.agi}/${h.growth.int} за уровень), все ${h.tiers.length} ступени профессии и все узлы своей ветки и общих деревьев ` +
+      `взяты целиком — всего ${h.nodes} узлов.`));
+    if (h.tiers.length) {
+      const tl = el('div', 'calc-hint');
+      tl.appendChild(el('b', '', 'Ступени профессии (их рост прибавляется к росту атрибутов): '));
+      tl.appendChild(document.createTextNode(h.tiers.map((t) =>
+        `${t.name} (ур. ${t.heroLevel}): +${fmtNum(t.growth.str, 2)} силы, +${fmtNum(t.growth.agi, 2)} ловкости, +${fmtNum(t.growth.int, 2)} интеллекта`
+      ).join('; ') + '.'));
+      box.appendChild(tl);
+    }
+
+    // Атрибуты: база -> рост -> ступени -> узлы -> % -> итог
+    const at = el('table', 'calc-table calc-base-table');
+    const ath = el('thead');
+    const ahr = el('tr');
+    ['Атрибут', 'База (1 ур.)', `Рост за ${L} ур.`, 'в т.ч. ступени', 'Узлы', '% от узлов', 'Итого'].forEach((t, i) => {
+      ahr.appendChild(el('th', i ? 'calc-num' : '', t));
+    });
+    ath.appendChild(ahr);
+    at.appendChild(ath);
+    const atb = el('tbody');
+    for (const [label, a, treeKey] of ATTR_ROWS) {
+      const tier = h.tierGrowth[a] * L;
+      const tree = T(treeKey) + T('base_all_stats');
+      const pct = h.level30.pct[a];
+      const tr = el('tr');
+      tr.appendChild(el('td', 'calc-name', label));
+      for (const [txt, cls] of [
+        [fmtNum(h.base[a], 1), ''],
+        ['+' + fmtNum(L * h.growthTotal[a], 1), ''],
+        [tier ? '+' + fmtNum(tier, 1) : '—', ''],
+        tree ? '+' + fmtNum(tree, 0) + (T('base_all_stats') ? ` (+${fmtNum(T('base_all_stats'), 0)} ко всем)` : '') : '—',
+        pct ? '+' + fmtNum(pct, 0) + ' %' : '—',
+        fmtNum(h.level30.attrs[a], 1),
+      ]) tr.appendChild(el('td', 'calc-num' + (txt === '—' ? ' calc-zero' : ''), txt));
+      atb.appendChild(tr);
+    }
+    at.appendChild(atb);
+    box.appendChild(at);
+
+    // Производные: база сборки -> узлы -> от атрибутов -> множитель -> итог
+    const dt = el('table', 'calc-table calc-base-table');
+    const dth = el('thead');
+    const dhr = el('tr');
+    ['Стат', 'База сборки', 'Узлы', 'От атрибутов', 'Множитель', 'Итого'].forEach((t, i) => {
+      dhr.appendChild(el('th', i ? 'calc-num' : '', t));
+    });
+    dth.appendChild(dhr);
+    dt.appendChild(dth);
+    const dtb = el('tbody');
+    const attrs = h.level30.attrs;
+    const rows = HERO_ROWS.concat([['Скорость передвижения', 'bonus_movespeed', 0, 'movementSpeed', 'base_movespeed']]);
+    for (const [label, key, dec, kvKey, treeKey] of rows) {
+      const kvVal = h.kv[kvKey] || 0;
+      const treeVal = T(treeKey);
+      const der = h.level30.derived[key];
+      const fromAttrs = der && ATTRS_FN[key] ? der.mult * ATTRS_FN[key](attrs) : null;
+      const mult = der && der.mult !== 1 ? der.mult
+        : key === 'bonus_movespeed' ? 1 + T('bonus_movespeed_pct') / 100 : null;
+      const value = state.base[key] != null && state.base[key] !== ''
+        ? Number(state.base[key]) || 0 : h.level30.totals[key];
+      const tr = el('tr');
+      tr.appendChild(el('td', 'calc-name', label));
+      for (const [txt, cls] of [
+        [fmtNum(kvVal, dec), ''],
+        [treeVal ? '+' + fmtNum(treeVal, dec) : '—', ''],
+        [fromAttrs != null ? '+' + fmtNum(fromAttrs, dec) : '—', ''],
+        [mult ? '×' + fmtNum(mult, 2) : '—', ''],
+        [fmtNum(value, dec), ''],
+      ]) tr.appendChild(el('td', 'calc-num' + (txt === '—' ? ' calc-zero' : ''), txt));
+      dtb.appendChild(tr);
+    }
+    dt.appendChild(dtb);
+    box.appendChild(dt);
+
+    // Деревья, которые вошли в расчёт
+    const trees = el('div', 'calc-base-trees');
+    trees.appendChild(el('div', 'calc-sub', 'Деревья в расчёте (все взяты целиком)'));
+    const chips = el('div', 'calc-tree-chips');
+    for (const t of h.trees) {
+      const chip = el('span', 'calc-tree-chip' + (t.hero ? ' is-own' : ''), `${t.name} (${t.id}) · ${t.nodes} узлов`);
+      const stats = Object.entries(t.stats).sort((a, b) => b[1] - a[1]).slice(0, 8)
+        .map(([k, v]) => `${(STAT_LABEL[k] || k)} +${v}`).join(', ');
+      chip.title = stats || 'статов нет';
+      chips.appendChild(chip);
+    }
+    trees.appendChild(chips);
+    box.appendChild(trees);
+
+    // Что узлы дают, но панель не показывает
+    if (h.level30.unused.length) {
+      const un = el('div', 'calc-hint');
+      un.appendChild(el('b', '', 'Панель пока не считает (эти статы узлов в «Итого» не входят): '));
+      un.appendChild(document.createTextNode(h.level30.unused.map((u) => `${u.label} +${fmtNum(u.value, 2)}`).join(', ') + '.'));
+      box.appendChild(un);
+    }
+
+    // Чего в расчёте нет
+    const notes = [];
+    notes.push(h.vanillaTalents.length
+      ? `Ванильные таланты героя (слоты Ability10–17): в сборке прописаны ${h.vanillaTalents.length}, но какая из парной пары выбрана — из данных не видно, в расчёт не входят.`
+      : 'Ванильные таланты героя: слоты Ability10–17 у него пустые.');
+    if (h.s3) notes.push('Рыцарь-дракон заведён только в наборе правил s3 — в s2 его ветка не действует.');
+    notes.push('Отметки из вкладки «Прокачка» на базу не влияют: своя ветка и все общие деревья считаются взятыми целиком.');
+    notes.push('Не учтены сеты, способности и боевые эффекты предметов (их вклад — в слотах справа), а также дерево tree20 — в интерфейсе игры оно не показано.');
+    const nBox = el('div', 'calc-base-notes');
+    nBox.appendChild(el('div', 'calc-sub', 'Чего в расчёте нет'));
+    for (const n of notes) nBox.appendChild(el('div', 'calc-hint', n));
+    box.appendChild(nBox);
+  }
 
   // Блок «Эффекты предметов»: у посчитанных — что именно прибавлено (их вклад
   // уже в колонке «Предметы»), у боевых — пометка, что в панель не входят.
@@ -518,6 +755,8 @@
         cell.total.textContent = fmtNum(t.sum, dec);
       }
     }
+    // блок «Откуда база» зависит от введённых атрибутов — обновляем вместе с числами
+    renderHeroBlock();
   }
 
   const fmtNum = (v, dec) => {
@@ -718,6 +957,7 @@
   function renderAll() {
     invalidatePools();
     renderStats();
+    renderHeroBlock();
     renderInv();
     renderItem();
     renderPick();

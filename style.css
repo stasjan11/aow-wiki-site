@@ -1831,6 +1831,25 @@ h2.sec {
   border-radius: 6px; padding: 3px 6px; font-size: 13px;
 }
 .calc-hint { color: var(--fg-3); font-size: 12px; line-height: 1.5; margin: 6px 0 10px; }
+/* блок «Откуда база» — расшифровка статов героя (tab-calc.js, renderHeroBlock) */
+.calc-base {
+  grid-column: 1 / -1;
+  padding: 14px 18px 24px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.calc-base-table { margin-bottom: 12px; }
+.calc-base-table td.calc-name { width: 30%; }
+.calc-base-trees { margin: 4px 0 10px; }
+.calc-tree-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.calc-tree-chip {
+  background: var(--bg-3); color: var(--fg-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: help;
+}
+.calc-tree-chip.is-own { border-color: var(--accent-2); color: var(--accent); }
+/* поле «База»: серое — из героя, акцентное — правка вручную */
+.calc-input.is-hero { color: var(--fg-3); }
+.calc-input.is-override { border-color: var(--accent-2); color: var(--accent); }
 .calc-reset {
   margin-left: auto; background: var(--bg-3); color: var(--fg-2);
   border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px;
