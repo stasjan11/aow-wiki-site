@@ -93,20 +93,22 @@
     return (st.value + eff * st.value * pct * 0.01) * statFactor(st, s);
   }
 
-  // Возможные значения свойства эффекта. Прокрутка квантована шагом 1/5 (шесть
-  // положений), сдвиг — iterationBonus из normal01 (utils/random.lua:94, клиент):
-  // 0.4·sqrt(min(9, iterationCount)/9) − 0.1. У свойств эффекта (и зафиксированных)
-  // подсид кончается константным хвостом 20 (STABLE_ATTRIBUTE_REFORGE_SEED_TAIL),
-  // поэтому iterationCount = 2 и сдвиг = 0.4·sqrt(2/9) − 0.1 ≈ 0.08856 — от уровня
-  // перековки он не зависит. Положения: −0.411, −0.211, −0.011, 0.189, 0.389 и
-  // потолок 0.5. (Раньше тут стоял сдвиг +0.3 и пять положений — исправлено
-  // 11.10.2026 по сверке с v1.505: 0658 фиолетовое 260, cap_pct жёлтое 127,
-  // 0876 жёлтое 191.)
+  // Возможные значения свойства эффекта — сетка из normal01 (utils/random.lua:92-97,
+  // клиент считает так же): квант 1/5 и сдвиг 0.4·sqrt(min(9, iterationCount)/9) − 0.1.
+  // У свойств эффекта (и зафиксированных) подсид кончается константным хвостом 20
+  // (STABLE_ATTRIBUTE_REFORGE_SEED_TAIL), поэтому iterationCount = 2 и сдвиг =
+  // 0.4·sqrt(2/9) − 0.1 ≈ 0.08856 — от уровня перековки он не зависит. Положения
+  // сетки: −0.411, −0.211, −0.011, 0.189, 0.389 и потолок 0.5. Самое нижнее
+  // (k = 0) в вике не показываем: оно выпадает ~1.3 % предметов (прогон по всем
+  // 10 000 сидов), а кнопок исторически пять. (Раньше сдвиг был +0.3 — это давало
+  // неверные значения; исправлено 11.10.2026 по сверке с v1.505: 0658 фиолетовое
+  // 260, cap_pct жёлтое 127, 0876 жёлтое 191.)
   const EFFECT_ROLL_BONUS = 0.4 * Math.sqrt(2 / 9) - 0.1;
+  const EFFECT_ROLL_FIRST = 1;
   function stepRolls(st, s) {
     const out = [];
     const seen = new Set();
-    for (let k = 0; k < ROLL_STEPS; k++) {
+    for (let k = EFFECT_ROLL_FIRST; k < ROLL_STEPS; k++) {
       const roll = Math.min(ROLL_MAX, -0.5 + k / (ROLL_STEPS - 1) + EFFECT_ROLL_BONUS);
       const value = roundBy(st.key, rollValueAtRoll(st, roll, s)); // округление как в игре
       if (seen.has(value)) continue;
@@ -162,7 +164,7 @@
   });
 
   window.AOWROLL = {
-    ROLL, ROLL_STEPS, ROLL_MAX, EFFECT_ROLL_BONUS,
+    ROLL, ROLL_STEPS, ROLL_MAX, EFFECT_ROLL_BONUS, EFFECT_ROLL_FIRST,
     isAbilityValue, isReverse, isEffectStat, isStone, isPct,
     rollPct, canFix, canDivine, divinePctOf, roundBy,
     statFactor, rollValueRaw, rollValue, rollValueAtRoll,
