@@ -463,6 +463,9 @@
       box.appendChild(wrap);
     }
 
+    // --- пометка «По коду» о скрытых механиках (ручная, из build.js: ITEM_DESC_NOTES)
+    if (i.descNote) box.appendChild(el('div', 'note', i.descNote));
+
     // --- у душ активный эффект общий на всех: различаются они пассивками
     if (i.isSoul) {
       const mult = soulMultiplier(i);
