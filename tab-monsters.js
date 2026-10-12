@@ -574,6 +574,9 @@
     }
     box.appendChild(stats);
 
+    // --- пометка «заготовка» (ручная, из build.js: MONSTER_NOTES)
+    if (m.note) box.appendChild(el('div', 'note', m.note));
+
     const diff = DIFFS[state.diff];
 
     // --- охрана объекта: дерево-надгробие спавнит группы монстров, когда его бьют
