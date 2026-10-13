@@ -26,7 +26,7 @@
   const divinePctOf = (k) => (k.startsWith('ability_') ? ROLL.divineAbilityPct : ROLL.divineBasePct);
   // Свойства эффекта предмета (ability_*): их значения стоят в описании пассивки.
   // Прокрутка у них квантована — на всю область ровно 6 положений (шаг 1/5 в
-  // utils/random.lua normal01), поэтому вместо ползунка у них кнопки-положения.
+  // сеткой normal01), поэтому вместо ползунка у них кнопки-положения.
   const ROLL_STEPS = 6;
   const isEffectStat = (k) => k.startsWith('ability_');
   // Грани (item_s_*) не куют: у них бывает только зафиксированный стат
@@ -91,7 +91,7 @@
     return (st.value + eff * st.value * pct * 0.01) * statFactor(st, s);
   }
 
-  // Возможные значения свойства эффекта — сетка из normal01 (utils/random.lua:92-97,
+  // Возможные значения свойства эффекта — сетка normal01,
   // клиент считает так же): квант 1/5 и сдвиг 0.4·sqrt(min(9, iterationCount)/9) − 0.1.
   // У свойств эффекта (и зафиксированных) подсид кончается константным хвостом 20
   // (STABLE_ATTRIBUTE_REFORGE_SEED_TAIL), поэтому iterationCount = 2 и сдвиг =

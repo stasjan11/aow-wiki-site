@@ -475,8 +475,7 @@
         `статами, качеством и уровнем: ${soulRulesText()}.`));
     }
 
-    // --- навык души: превращение в босса (данные собирает build.js из boss_transform/*,
-    // ak_player_boss_abilities.lua и ak_life_souls.lua — см. soulSkills)
+    // --- навык души: превращение в босса (данные собирает build.js — см. soulSkills)
     if (i.soulSkill) {
       const s = i.soulSkill;
       const AIM_RU = {
