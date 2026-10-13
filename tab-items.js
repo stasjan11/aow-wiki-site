@@ -13,8 +13,9 @@
   const DIFFS = META.difficulties;
 
   // предметы, которые не показываем здесь: расходники и контейнеры — в своей вкладке,
-  // рецепты — в крафте, руны и грани — в «Небе»
-  const HIDDEN_TYPES = new Set(['gem', 'stone']);
+  // рецепты — в крафте, грани — в «Небе». Руны (gem) с 13.10.2026 показываются здесь
+  // и имеют свой фильтр «Руна» — на них ссылается вкладка «Герои».
+  const HIDDEN_TYPES = new Set(['stone']);
   const isContainer = (i) => !!i.poolId;
 
   const ITEM_TYPE_LABEL = {

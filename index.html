@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AOW — вики</title>
-<link rel="stylesheet" href="style.css?v=202610131332">
+<link rel="stylesheet" href="style.css?v=202610131416">
 <style>
 /* Замок на вход (см. скрипт в конце файла). Пока не введён пароль, весь
    контент страницы скрыт, видна только карточка с полем пароля. */
@@ -56,6 +56,7 @@ html.locked body > *:not(#lock) { display: none !important; }
     <button class="tab" data-tab="sky">Небо</button>
     <button class="tab" data-tab="craft">Крафт</button>
     <button class="tab" data-tab="progression">Прокачка</button>
+    <button class="tab" data-tab="heroes">Герои</button>
     <button class="tab" data-tab="vendors">Продавцы <span class="wip">WIP</span></button>
     <button class="tab" data-tab="minigames">Мини-игры</button>
     <button class="tab" data-tab="faq">FAQ</button>
@@ -251,6 +252,25 @@ html.locked body > *:not(#lock) { display: none !important; }
 
 </main>
 
+<!-- ============================== ГЕРОИ ============================== -->
+<main class="layout layout-heroes" id="pane-heroes" hidden>
+
+  <aside class="col col-heroes">
+    <div class="col-head">
+      <input type="search" id="heroQ" class="input" placeholder="Поиск героя…" autocomplete="off">
+      <div class="list-head">
+        <span id="heroCount" class="count"></span>
+      </div>
+    </div>
+    <div id="heroList" class="list"></div>
+  </aside>
+
+  <section class="detail" id="heroDetail">
+    <div class="empty">Выберите героя</div>
+  </section>
+
+</main>
+
 <!-- ============================= ПРОДАВЦЫ ============================= -->
 <main class="layout layout-sky" id="pane-vendors" hidden>
 
@@ -317,35 +337,37 @@ html.locked body > *:not(#lock) { display: none !important; }
 
 </main>
 
-<script src="data/meta.js?v=202610131332"></script>
-<script src="data/items.js?v=202610131332"></script>
-<script src="data/stones.js?v=202610131332"></script>
-<script src="data/pools.js?v=202610131332"></script>
-<script src="data/greed.js?v=202610131332"></script>
-<script src="data/monsters.js?v=202610131332"></script>
-<script src="data/minigames.js?v=202610131332"></script>
-<script src="data/progression.js?v=202610131332"></script>
-<script src="data/heroStats.js?v=202610131332"></script>
-<script src="data/vendors.js?v=202610131332"></script>
-<script src="data/faq.js?v=202610131332"></script>
-<script src="data/maps.js?v=202610131332"></script>
-<script src="data/craft.js?v=202610131332"></script>
-<script src="data/sources.js?v=202610131332"></script>
-<script src="app.js?v=202610131332"></script>
-<script src="farm.js?v=202610131332"></script>
-<script src="itemroll.js?v=202610131332"></script>
-<script src="itemstats.js?v=202610131332"></script>
-<script src="itemeffects.js?v=202610131332"></script>
-<script src="tab-monsters.js?v=202610131332"></script>
-<script src="tab-craft.js?v=202610131332"></script>
-<script src="tab-items.js?v=202610131332"></script>
-<script src="tab-consumables.js?v=202610131332"></script>
-<script src="tab-sky.js?v=202610131332"></script>
-<script src="tab-progression.js?v=202610131332"></script>
-<script src="tab-vendors.js?v=202610131332"></script>
-<script src="tab-faq.js?v=202610131332"></script>
-<script src="tab-minigames.js?v=202610131332"></script>
-<script src="tab-calc.js?v=202610131332"></script>
+<script src="data/meta.js?v=202610131416"></script>
+<script src="data/items.js?v=202610131416"></script>
+<script src="data/stones.js?v=202610131416"></script>
+<script src="data/pools.js?v=202610131416"></script>
+<script src="data/greed.js?v=202610131416"></script>
+<script src="data/monsters.js?v=202610131416"></script>
+<script src="data/minigames.js?v=202610131416"></script>
+<script src="data/progression.js?v=202610131416"></script>
+<script src="data/heroStats.js?v=202610131416"></script>
+<script src="data/heroes.js?v=202610131416"></script>
+<script src="data/vendors.js?v=202610131416"></script>
+<script src="data/faq.js?v=202610131416"></script>
+<script src="data/maps.js?v=202610131416"></script>
+<script src="data/craft.js?v=202610131416"></script>
+<script src="data/sources.js?v=202610131416"></script>
+<script src="app.js?v=202610131416"></script>
+<script src="farm.js?v=202610131416"></script>
+<script src="itemroll.js?v=202610131416"></script>
+<script src="itemstats.js?v=202610131416"></script>
+<script src="itemeffects.js?v=202610131416"></script>
+<script src="tab-monsters.js?v=202610131416"></script>
+<script src="tab-craft.js?v=202610131416"></script>
+<script src="tab-items.js?v=202610131416"></script>
+<script src="tab-consumables.js?v=202610131416"></script>
+<script src="tab-sky.js?v=202610131416"></script>
+<script src="tab-progression.js?v=202610131416"></script>
+<script src="tab-heroes.js?v=202610131416"></script>
+<script src="tab-vendors.js?v=202610131416"></script>
+<script src="tab-faq.js?v=202610131416"></script>
+<script src="tab-minigames.js?v=202610131416"></script>
+<script src="tab-calc.js?v=202610131416"></script>
 
 <!-- Замок на вход: просим пароль при первом открытии сайта (http/https),
      дальше браузер запоминает. Это шторка от случайных людей, а не защита:
