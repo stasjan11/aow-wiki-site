@@ -1470,6 +1470,7 @@ h2.sec {
 /* плашки источников: платный магазин и гача */
 .src-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-gacha { border-color: #7a5ea8; color: #c9a6ff; }
+.tag-rune-bag { border-color: #3f7f6a; color: #7fe0c0; }
 .tag-mall { border-color: var(--accent-2); color: var(--accent); }
 
 /* переключатель локаций на карте: существо может спавниться в нескольких */

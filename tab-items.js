@@ -335,6 +335,36 @@
     if (prices.length) box.appendChild(el('div', 'note', prices.join(' · ')));
   }
 
+  // «Из контейнеров»: у рун источники помимо монстров — мешки с рунами и сундуки
+  // гильдии (обратный индекс i.containers из build.js). Мешок даёт ровно одну руну
+  // из пула, поэтому его доля веса — это и есть шанс; у сундуков сначала бросается
+  // шанс предмета (itemChance), потом вес внутри пула.
+  function renderContainers(box, i) {
+    const list = (i.containers || []).slice().sort((a, b) => b.share - a.share);
+    if (!list.length) return;
+    box.appendChild(el('h2', 'sec', `Из контейнеров (${list.length})`));
+    const row = el('div', 'src-tags');
+    for (const c of list) {
+      const b = ITEMS[c.box] || { id: c.box, name: c.box };
+      const isBag = /^Мешок с рунами/.test(b.name || '');
+      const t = el('span', 'tag tag-link' + (isBag ? ' tag-rune-bag' : ''), `${b.name} · ${pct(c.share)}`);
+      const chance = b.itemChance;
+      t.title = `${b.name} (${b.id})\n` +
+        (isBag
+          ? `Мешок всегда даёт 1 случайную руну из своего пула — шанс этой: ${pct(c.share)}`
+          : `При открытии предмет выпадает с шансом ${chance == null ? '?' : chance + ' %'}, ` +
+            `затем вес внутри пула — ${pct(c.share)}`) +
+        `\nПул: ${c.pool}` +
+        '\n\nКлик — открыть контейнер во вкладке «Расходники»';
+      t.onclick = () => go('consumables', b.id);
+      row.appendChild(t);
+    }
+    box.appendChild(row);
+    box.appendChild(el('div', 'note',
+      'Доля показана по весам пула. Вес пула снижается после повторных выпадений ' +
+      'из того же источника (см. FAQ «Механика дропа»).'));
+  }
+
   // «Открывается талантом»: крафт предмета появляется после изучения узла дерева
   // прокачки (поле formula в ak_talent). Клик — узел подсветится в дереве.
   function renderTalentUnlock(box, i) {
@@ -567,6 +597,9 @@
       box.appendChild(el('div', 'note',
         'Ни у одного монстра в дропе этого рецепта нет — источников в данных не нашлось.'));
     }
+
+    // --- у рун, кроме монстров, есть контейнеры: мешки с рунами, сундуки гильдии
+    renderContainers(box, i);
 
     // --- гарантированный первый дроп (poolFirst): один предмет из списка за убийство,
     // выбор по весу. У рецептов обычного дропа часто нет вовсе, а первый дроп есть —
