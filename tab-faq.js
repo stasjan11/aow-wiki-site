@@ -16,12 +16,15 @@
 
   const state = {
     section: FAQ.sections.length ? FAQ.sections[0].key : null,
+    sub: null, // активная подвкладка раздела (у разделов с subs)
     query: '',
     pool: null, // выбранный пул в разделе «Дроп-пулы»
   };
 
   const section = (key) => FAQ.sections.find((s) => s.key === key);
   const plain = (s) => s.title;
+  // активная подвкладка раздела: запомненная или первая
+  const activeSub = (s) => (s && s.subs ? (s.subs.find((x) => x.key === state.sub) || s.subs[0] || null) : null);
 
   // ------------------------------------------------------------ левый столбец
 
@@ -37,7 +40,7 @@
     const q = state.query.trim().toLowerCase();
     const list = FAQ.sections.filter((s) => {
       if (!q) return true;
-      const text = s.title + ' ' + JSON.stringify(s.blocks);
+      const text = s.title + ' ' + JSON.stringify(s.blocks) + ' ' + JSON.stringify(s.subs || '');
       return text.toLowerCase().includes(q);
     });
     if (!list.length) {
@@ -48,13 +51,15 @@
       const card = el('div', 'card' + (state.section === s.key ? ' is-active' : ''));
       const main = el('div', 'card-main');
       main.appendChild(el('div', 'card-name', plain(s)));
-      const blocks = s.blocks.length;
-      const tables = s.blocks.filter((b) => b.type === 'table').length;
+      const all = (s.blocks || []).concat(...(s.subs || []).map((x) => x.blocks));
+      const blocks = all.length;
+      const tables = all.filter((b) => b.type === 'table').length;
       main.appendChild(el('div', 'card-sub',
         tables ? `${blocks} блоков · ${tables} таблиц` : `${blocks} блоков`));
       card.appendChild(main);
       card.onclick = () => {
         state.section = s.key;
+        state.sub = null; // у нового раздела — своя первая подвкладка
         renderList();
         render();
         location.hash = 'faq/' + s.key;
@@ -231,12 +236,29 @@
     head.appendChild(el('div', 'd-title', s.title));
     head.appendChild(el('div', 'd-code', `#faq/${s.key}`));
     box.appendChild(head);
-    for (const b of s.blocks) box.appendChild(block(b));
+
+    // разделы-«сборники» показываются подвкладками: страница не растягивается,
+    // а переключаться между темами можно строкой вверху (см. MERGE в build.js)
+    const sub = activeSub(s);
+    if (sub) {
+      const bar = el('div', 'subtabs faq-subtabs');
+      for (const x of s.subs) {
+        const b = el('button', 'subtab' + (sub.key === x.key ? ' is-active' : ''), x.title);
+        b.type = 'button';
+        b.dataset.sub = x.key;
+        b.onclick = () => {
+          state.sub = x.key;
+          render();
+          location.hash = 'faq/' + s.key + '/' + x.key;
+        };
+        bar.appendChild(b);
+      }
+      box.appendChild(bar);
+    }
+    for (const b of (sub ? sub.blocks : s.blocks)) box.appendChild(block(b));
 
     box.appendChild(el('div', 'note',
-      'Числа собраны из конфигов сборки и расшифрованных серверных скриптов ' +
-      '(в релизе они зашифрованы, читались из беты). Если что-то менялось в патчах — ' +
-      'проверяйте по своей версии игры.'));
+      'Если что-то менялось в патчах — проверяйте по своей версии игры.'));
     box.appendChild(el('div', 'footnote', `Правила: ${AOW.meta.ruleset} · данные собраны ${AOW.meta.built}`));
     box.scrollTop = 0;
   }
@@ -262,12 +284,18 @@
     initSearch();
     const parts = location.hash.slice(1).split('/');
     if (section(parts[1])) state.section = parts[1];
+    if (parts[2]) state.sub = decodeURIComponent(parts[2]);
     renderList();
     window.addEventListener('hashchange', () => {
       const p = location.hash.slice(1).split('/');
       if (p[0] !== 'faq' || !p[1]) return;
       if (section(p[1])) {
+        const same = state.section === p[1];
         state.section = p[1];
+        // #faq/<раздел>/<подвкладка>: без третьей части подвкладку не сбрасываем,
+        // если пришли в тот же раздел (клик по подвкладке сам ставит hash)
+        if (p[2]) state.sub = decodeURIComponent(p[2]);
+        else if (!same) state.sub = null;
         renderList();
         render();
       }

@@ -1,9 +1,7 @@
 // Вкладка «Продавцы» — обычный, древний и гильдейский торговцы.
 //
-// Правила торговцев лежат в серверных скриптах сборки (в релизе зашифрованы, читаны
-// из AOWbeta: shop/shop.decrypted.lua, shop/ancient_shop.decrypted.lua,
-// my_game_axe/merchant/merchant_config.decrypted.lua). Данные собирает buildVendors
-// в build.js, здесь — показ: ассортимент, цены, таймеры и лимиты.
+// Данные собирает buildVendors в build.js, здесь — показ: ассортимент, цены,
+// таймеры и лимиты.
 // Списки выводятся целиком, с поиском, фильтром по качеству и галочкой рецептов.
 
 (function () {
@@ -445,11 +443,6 @@
     if (state.tab === 'ancient') renderAncient(box);
     else if (state.tab === 'guild') renderGuild(box);
     else renderRegular(box);
-    box.appendChild(el('div', 'note',
-      'Правила торговцев взяты из серверных скриптов сборки: в релизе они зашифрованы, ' +
-      'поэтому использована расшифрованная копия из AOWbeta (shop.lua, ancient_shop.lua, ' +
-      'merchant_config.lua). Цены обычного и древнего торговца пересчитываются при каждом ' +
-      'обновлении ассортимента, поэтому в вике показан диапазон, а не одно число.'));
     box.appendChild(el('div', 'footnote', `Правила: ${AOW.meta.ruleset} · данные собраны ${AOW.meta.built}`));
     box.scrollTop = 0;
   }

@@ -20,7 +20,7 @@
     container: 'Контейнер',
   };
 
-  const state = { tab: 'tier1', kind: '', wave: '', cTier: '', cFloor: '', cKind: '' };
+  const state = { tab: 'tier1', kind: '', wave: '', cTier: '', cFloor: '', cKind: '', focus: '' };
 
   const SUBTABS = [
     { key: 'tier1', label: 'Небо 1' },
@@ -80,6 +80,16 @@
     }
   }
 
+  // Клик по монстру в «Небе»: уводим в «Пулы спавна» и подсвечиваем его строку —
+  // игроку нужнее «в каком пуле он стоит», чем карточка монстра.
+  function goSpawns(monsterId) {
+    state.tab = 'spawns';
+    state.focus = monsterId || '';
+    const box = $('skytabs');
+    [...box.children].forEach((c) => c.classList.toggle('is-active', c.dataset.key === 'spawns'));
+    render();
+  }
+
   // ------------------------------------------------------------------- рендер
 
   function render() {
@@ -99,12 +109,17 @@
     const head = el('div', 'd-head');
     head.appendChild(el('div', 'd-title', 'Скейл монстров'));
     head.appendChild(el('div', 'd-code',
-      `greed_cave_endless_monster_attributes · этажей ${s.floors.length}`));
+      `этажей ${s.floors.length}`));
     box.appendChild(head);
 
     box.appendChild(el('div', 'desc-text',
       'Монстры растут от этажа (в бесконечке волна — это и есть этаж). ' +
       'У обычных тиров одна кривая на все три башни, в бесконечке — своя таблица.'));
+
+    box.appendChild(el('div', 'note note-hard',
+      'Число игроков в забеге характеристики монстров не меняет: HP и урон зависят только ' +
+      'от этажа и вида монстра. От состава группы зависят только награды — с босса каждому ' +
+      'игроку падает своя награда, и сумка у каждого своя.'));
 
     // сколько монстров спавнится на обычной волне (константы открытого конфига релиза)
     const wc = GREED.waveCounts;
@@ -135,11 +150,17 @@
           `этажей ${t.maxFloors[i]} · множитель ×${tier.mult} · бег +${tier.move} % · атака +${tier.aspd} %`));
         cell.appendChild(txt);
         const stats = el('div', 'spawn-groups');
-        stats.textContent = [
-          `обычный ${Math.round(t.normal.hp * tier.mult).toLocaleString('ru-RU')} HP / ${t.normal.atk} урона`,
-          `элита ${Math.round(t.elite.hp * tier.mult).toLocaleString('ru-RU')} / ${t.elite.atk}`,
-          `босс ${Math.round(t.boss.hp * tier.mult).toLocaleString('ru-RU')} / ${t.boss.atk}`,
-        ].join(' · ');
+        // три строки столбиком: в одну строку текст не влезал
+        for (const [label, hp, atk] of [
+          ['обычный', t.normal.hp * tier.mult, t.normal.atk],
+          ['элита', t.elite.hp * tier.mult, t.elite.atk],
+          ['босс', t.boss.hp * tier.mult, t.boss.atk],
+        ]) {
+          const line = el('div', 'spawn-line');
+          line.appendChild(el('span', 'spawn-line-label', label));
+          line.appendChild(el('span', null, `${Math.round(hp).toLocaleString('ru-RU')} HP / ${atk} урона`));
+          stats.appendChild(line);
+        }
         cell.appendChild(stats);
         cell.title = `Рост ×${t.growth} за этаж, на 1-м этаже значения выше; ` +
           `дальше умножаются на это же число каждый этаж`;
@@ -158,11 +179,17 @@
         txt.appendChild(el('div', 'dc-code', `броня ${f.armor} · маг. сопр. ${f.mr} %`));
         cell.appendChild(txt);
         const stats = el('div', 'spawn-groups');
-        stats.textContent = [
-          `обычный ${f.normal.hp.toLocaleString('ru-RU')} HP / ${f.normal.atk}`,
-          `элита ${f.elite.hp.toLocaleString('ru-RU')} / ${f.elite.atk}`,
-          `босс ${f.boss.hp.toLocaleString('ru-RU')} / ${f.boss.atk}`,
-        ].join(' · ');
+        // три строки столбиком: в одну строку текст не влезал
+        for (const [label, hp, atk] of [
+          ['обычный', f.normal.hp, f.normal.atk],
+          ['элита', f.elite.hp, f.elite.atk],
+          ['босс', f.boss.hp, f.boss.atk],
+        ]) {
+          const line = el('div', 'spawn-line');
+          line.appendChild(el('span', 'spawn-line-label', label));
+          line.appendChild(el('span', null, `${hp.toLocaleString('ru-RU')} HP / ${atk} урона`));
+          stats.appendChild(line);
+        }
         cell.appendChild(stats);
         cell.title = `Этаж ${f.floor}: обычный ${f.normal.hp} HP, урон ${f.normal.atk}; ` +
           `элита ${f.elite.hp} / ${f.elite.atk}; босс ${f.boss.hp} / ${f.boss.atk}; ` +
@@ -184,18 +211,16 @@
         `Сопротивление стану у боссов бесконечки растёт линейно: ${g.stunBase} + (этаж − 1).`));
     }
 
-    box.appendChild(el('div', 'note',
-      'Числа взяты из расшифрованного серверного файла беты (в релизе он зашифрован): ' +
-      '`my_game_axe/greed_cave/greed_cave_endless_monster_attributes.decrypted.lua` и `config.lua`.'));
     box.appendChild(footnote());
   }
 
   // --- Пулы спавна: из чего набираются волны на этажах
   function renderSpawnPools(box) {
     const pools = GREED.spawnPools || [];
+    let focusLine = null;
     const head = el('div', 'd-head');
     head.appendChild(el('div', 'd-title', 'Пулы спавна'));
-    head.appendChild(el('div', 'd-code', `ak_greed_cave_monster_pools · ${pools.length} пулов`));
+    head.appendChild(el('div', 'd-code', `пулов ${pools.length}`));
     box.appendChild(head);
 
     const tiers = [
@@ -226,6 +251,11 @@
             line.onclick = () => go('monsters', m.id);
             line.title = `${m.id} — открыть во вкладке монстров`;
           }
+          // подсветка монстра, по которому пришли из «Неба»
+          if (state.focus && state.focus === m.id) {
+            line.classList.add('is-focus');
+            focusLine = line;
+          }
           cell.appendChild(line);
         }
         grid.appendChild(cell);
@@ -237,6 +267,10 @@
       'в подвкладке «Волны». Ссылка на другой пул (GCM_…) означает, что часть веса уходит в него ' +
       'рекурсивно, то есть это вложенный пул.'));
     box.appendChild(footnote());
+    // монстр, по которому пришли из «Неба»: прокручиваем к его строке
+    if (focusLine && typeof focusLine.scrollIntoView === 'function') {
+      focusLine.scrollIntoView({ block: 'center' });
+    }
   }
 
   // --- Волны: готовые комбо с координатами
@@ -244,7 +278,7 @@
     const combos = GREED.combos || [];
     const head = el('div', 'd-head');
     head.appendChild(el('div', 'd-title', 'Волны'));
-    head.appendChild(el('div', 'd-code', `ak_greed_cave_monster_combos · ${combos.length} комбо`));
+    head.appendChild(el('div', 'd-code', `комбо ${combos.length}`));
     box.appendChild(head);
 
     const kinds = [...new Set(combos.map((c) => c.kind))].sort();
@@ -292,8 +326,8 @@
         line.appendChild(el('span', 'pool-share', `${m.x}, ${m.y}`));
         if (!m.pool) {
           line.classList.add('is-link');
-          line.onclick = () => go('monsters', m.id);
-          line.title = `${m.id} — роль ${m.role || 'boss (по умолчанию)'} — открыть во вкладке монстров`;
+          line.onclick = () => goSpawns(m.id);
+          line.title = `${m.id} — роль ${m.role || 'boss (по умолчанию)'} — показать пул спавна`;
         }
         cell.appendChild(line);
       }
@@ -384,9 +418,9 @@
         txt.appendChild(el('div', 'dc-code', bits.filter(Boolean).join(' · ') || m.id));
         cell.appendChild(txt);
         if (mon) {
-          cell.onclick = () => go('monsters', m.id);
+          cell.onclick = () => goSpawns(m.id);
           cell.title = `${mon.name} (${m.id})\n${TYPE_LABEL[mon.type] || mon.type || ''} · уровень ${mon.level}` +
-            (rooms ? `\n${rooms}` : '') + '\n\nКлик — открыть во вкладке монстров';
+            (rooms ? `\n${rooms}` : '') + '\n\nКлик — показать пул спавна';
         }
         grid.appendChild(cell);
       }
